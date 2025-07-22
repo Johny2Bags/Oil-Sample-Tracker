@@ -272,6 +272,9 @@
                 <button id="createAssetBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
                     + Create New Asset
                 </button>
+                <button id="deleteAssetBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md" disabled>
+                    Delete Selected Asset
+                </button>
             </div>
             <p class="text-md font-semibold text-gray-800">Current Site: <span id="currentSiteNameDisplay" class="text-blue-600">None Selected</span></p>
             <p class="text-md font-semibold text-gray-800">Current Asset: <span id="currentAssetNameDisplay" class="text-blue-600">None Selected</span></p>
@@ -631,13 +634,14 @@
         // Site & Asset Management UI Elements
         const siteSelect = document.getElementById('siteSelect');
         const createSiteBtn = document.getElementById('createSiteBtn');
-        const siteModal = document.getElementById('siteModal'); // Renamed from jobModal
-        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn'); // Renamed from closeJobModalBtn
-        const newSiteForm = document.getElementById('newSiteForm'); // Renamed from newJobForm
-        const newSiteNameInput = document.getElementById('newSiteName'); // Renamed from newJobName
+        const siteModal = document.getElementById('siteModal');
+        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn');
+        const newSiteForm = document.getElementById('newSiteForm');
+        const newSiteNameInput = document.getElementById('newSiteName');
 
         const assetSelect = document.getElementById('assetSelect');
         const createAssetBtn = document.getElementById('createAssetBtn');
+        const deleteAssetBtn = document.getElementById('deleteAssetBtn'); // New: Delete Asset Button
         const assetModal = document.getElementById('assetModal');
         const closeAssetModalBtn = document.getElementById('closeAssetModalBtn');
         const newAssetForm = document.getElementById('newAssetForm');
@@ -780,6 +784,7 @@
             loadingIndicator.classList.remove('hidden');
             siteSelect.innerHTML = '<option value="">Loading Sites...</option>'; // Clear and show loading
             assetSelect.innerHTML = '<option value="">Select Site First</option>'; // Clear asset dropdown
+            deleteAssetBtn.disabled = true; // Disable delete asset button
 
             try {
                 const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
@@ -890,10 +895,12 @@
                 allTestData = []; // Clear data if no site is selected
                 filterAndDisplayData(); // Update display to show no data
                 drawChart(allTestData, graphParamSelect.value); // Clear graph
+                deleteAssetBtn.disabled = true; // Disable delete asset button
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             assetSelect.innerHTML = '<option value="">Loading Assets...</option>'; // Clear and show loading
+            deleteAssetBtn.disabled = true; // Disable delete asset button until an asset is selected
 
             try {
                 const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
@@ -925,6 +932,7 @@
                         currentAssetNameDisplay.textContent = currentAssetName;
                         setupFirestoreListener(); // Re-attach listener for current asset
                     }
+                    deleteAssetBtn.disabled = false; // Enable delete asset button if assets are available
                 } else {
                     assetSelect.innerHTML = '<option value="">No Assets Available</option>';
                     currentAssetId = null;
@@ -932,6 +940,7 @@
                     currentAssetNameDisplay.textContent = currentAssetName;
                     showMessageBox(`No assets found for site "${currentSiteName}". Please create your first asset!`, false);
                     assetModal.style.display = 'flex'; // Automatically open asset creation modal
+                    deleteAssetBtn.disabled = true; // No assets, keep disabled
                 }
             } catch (e) {
                 console.error("Error loading assets:", e);
@@ -953,6 +962,7 @@
             assetSelect.value = assetId; // Ensure dropdown reflects selection
             setupFirestoreListener(); // Load test data for the newly selected asset
             showMessageBox(`Asset "${assetName}" selected.`);
+            deleteAssetBtn.disabled = false; // Enable delete asset button when an asset is selected
         }
 
         /**
@@ -984,6 +994,52 @@
             } finally {
                 loadingIndicator.classList.add('hidden');
             }
+        }
+
+        /**
+         * Deletes the currently selected asset and all its associated test data.
+         */
+        async function deleteSelectedAsset() {
+            if (!currentSiteId || !currentAssetId) {
+                showMessageBox("No asset selected to delete.", true);
+                return;
+            }
+
+            showConfirmationModal(`Are you sure you want to delete asset "${currentAssetName}" and ALL its test data? This action cannot be undone.`, async () => {
+                loadingIndicator.classList.remove('hidden');
+                try {
+                    // 1. Delete all test entries within the asset's subcollection
+                    const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+                    const testsColRef = collection(db, testsPath);
+                    const testsSnapshot = await getDocs(testsColRef);
+
+                    const deletePromises = [];
+                    testsSnapshot.forEach((testDoc) => {
+                        deletePromises.push(deleteDoc(doc(db, testsPath, testDoc.id)));
+                    });
+                    await Promise.all(deletePromises);
+                    console.log(`All test entries for asset ${currentAssetName} deleted.`);
+
+                    // 2. Delete the asset document itself
+                    const assetDocRef = doc(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`, currentAssetId);
+                    await deleteDoc(assetDocRef);
+                    console.log(`Asset ${currentAssetName} successfully deleted!`);
+
+                    showMessageBox(`Asset "${currentAssetName}" and its data deleted successfully!`);
+
+                    // Reset current asset and reload assets for the current site
+                    currentAssetId = null;
+                    currentAssetName = 'None Selected';
+                    currentAssetNameDisplay.textContent = currentAssetName;
+                    await loadAssets(); // Reload assets for the current site
+                    setupFirestoreListener(); // Clear chart and list if no asset is selected
+                } catch (e) {
+                    console.error("Error deleting asset:", e);
+                    showMessageBox(`Error deleting asset: ${e.message}`, true);
+                } finally {
+                    loadingIndicator.classList.add('hidden');
+                }
+            });
         }
 
         // --- Firestore Data Operations (now site and asset-specific) ---
@@ -1438,6 +1494,12 @@
                 drawChart(allTestData, graphParamSelect.value); // Clear graph
                 showMessageBox("Please select or create an asset.", true);
             }
+        });
+
+        // New: Event listener for the Delete Asset button
+        deleteAssetBtn.addEventListener('click', () => {
+            console.log("Delete Asset button clicked!"); // Log for debugging
+            deleteSelectedAsset();
         });
 
         // --- Initial Setup ---
