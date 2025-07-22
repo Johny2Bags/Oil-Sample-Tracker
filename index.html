@@ -1362,6 +1362,7 @@
 
         // --- Site & Asset Management Event Listeners ---
         createSiteBtn.addEventListener('click', () => {
+            console.log("Create Site button clicked!"); // Log for debugging
             newSiteNameInput.value = ''; // Clear input
             siteModal.style.display = 'flex'; // Show site creation modal
         });
@@ -1400,6 +1401,7 @@
         });
 
         createAssetBtn.addEventListener('click', () => {
+            console.log("Create Asset button clicked!"); // Log for debugging
             if (!currentSiteId) {
                 showMessageBox("Please select a site before creating an asset.", true);
                 return;
