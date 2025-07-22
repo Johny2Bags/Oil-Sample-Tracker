@@ -275,6 +275,14 @@
             </div>
             <p class="text-md font-semibold text-gray-800">Current Site: <span id="currentSiteNameDisplay" class="text-blue-600">None Selected</span></p>
             <p class="text-md font-semibold text-gray-800">Current Asset: <span id="currentAssetNameDisplay" class="text-blue-600">None Selected</span></p>
+            <!-- New section for asset details -->
+            <div id="currentAssetDetails" class="text-sm text-gray-700 mt-2 p-2 bg-gray-50 rounded-lg">
+                <p>Serial No: <span id="assetSerialNo">N/A</span></p>
+                <p>Make: <span id="assetMake">N/A</span></p>
+                <p>Type: <span id="assetType">N/A</span></p>
+                <p>Volume (Litres): <span id="assetVolume">N/A</span></p>
+                <p>KVA Rating: <span id="assetKVARating">N/A</span></p>
+            </div>
         </div>
 
         <div class="flex flex-wrap gap-4 mb-6 justify-center">
@@ -310,6 +318,7 @@
                 <option value="oxygen">Oxygen ($O_2$)</option>
                 <option value="nitrogen">Nitrogen ($N_2$)</option>
                 <option value="totalDissolvedGas">Total Dissolved Gas (ppm)</option>
+                <option value="totalCombustibleGas">Total Combustible Gas (ppm)</option>
                 <!-- Add more parameters here if needed -->
             </select>
             <button id="downloadGraphBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
@@ -343,41 +352,14 @@
                         <label for="dateOfSample">Date of Sample:</label>
                         <input type="date" id="dateOfSample" name="dateOfSample" required class="rounded-lg">
                     </div>
-                    <div class="form-group">
-                        <label for="dateOfTest">Date of Test:</label>
-                        <input type="date" id="dateOfTest" name="dateOfTest" required class="rounded-lg">
-                    </div>
+                    <!-- Removed Date of Test, Test ID, Turbidity -->
                     <div class="form-group">
                         <label for="assetNo">Asset No:</label>
                         <input type="text" id="assetNo" name="assetNo" placeholder="e.g., 359897" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="serialNo">Serial No:</label>
-                        <input type="text" id="serialNo" name="serialNo" placeholder="e.g., 119,707" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="make">Make:</label>
-                        <input type="text" id="make" name="make" placeholder="e.g., Newton" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="type">Type:</label>
-                        <input type="text" id="type" name="type" placeholder="e.g., Transformer" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="volume">Volume (Litres):</label>
-                        <input type="number" id="volume" name="volume" step="any" placeholder="e.g., 2111" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="testID">Test ID:</label>
-                        <input type="text" id="testID" name="testID" placeholder="e.g., MIDEL 7131" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
                         <label for="samplePoint">Sample Point:</label>
                         <input type="text" id="samplePoint" name="samplePoint" placeholder="e.g., Bottom of main tank" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="kVADating">KVA Rating:</label>
-                        <input type="number" id="kVADating" name="kVADating" placeholder="e.g., 1000" class="rounded-lg">
                     </div>
 
                     <!-- Physical and Chemical Tests -->
@@ -450,10 +432,6 @@
                         <label for="fibres">Fibres:</label>
                         <input type="text" id="fibres" name="fibres" placeholder="e.g., Fine" class="rounded-lg">
                     </div>
-                    <div class="form-group">
-                        <label for="turbidity">Turbidity:</label>
-                        <input type="text" id="turbidity" name="turbidity" placeholder="e.g., Paint trace" class="rounded-lg">
-                    </div>
 
                     <!-- Dissolved Gas Analysis (DGA) -->
                     <div class="md:col-span-2 text-lg font-semibold text-blue-700 mt-6">Dissolved Gas Analysis (DGA) - ppm</div>
@@ -496,6 +474,11 @@
                     <div class="form-group">
                         <label for="totalDissolvedGas">Total Dissolved Gas:</label>
                         <input type="number" id="totalDissolvedGas" name="totalDissolvedGas" step="any" placeholder="e.g., 164159" class="rounded-lg">
+                    </div>
+                    <!-- New: Total Combustible Gas -->
+                    <div class="form-group">
+                        <label for="totalCombustibleGas">Total Combustible Gas (ppm):</label>
+                        <input type="number" id="totalCombustibleGas" name="totalCombustibleGas" step="any" placeholder="e.g., 557" class="rounded-lg">
                     </div>
 
                     <!-- Furan Analysis -->
@@ -573,14 +556,36 @@
             <div class="modal-content max-w-sm text-center p-8">
                 <span class="close-button" id="closeAssetModalBtn">&times;</span>
                 <h2 class="text-2xl mb-4">Create New Asset</h2>
-                <form id="newAssetForm">
-                    <div class="form-group mb-6">
-                        <label for="newAssetName" class="block text-gray-700 font-bold mb-2">Asset Name:</label>
+                <form id="newAssetForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="newAssetName">Asset Name:</label>
                         <input type="text" id="newAssetName" name="newAssetName" placeholder="e.g., Transformer T1" required class="rounded-lg">
                     </div>
-                    <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
-                        Create Asset
-                    </button>
+                    <div class="form-group">
+                        <label for="assetSerialNoInput">Serial No:</label>
+                        <input type="text" id="assetSerialNoInput" name="serialNo" placeholder="e.g., 119,707" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="assetMakeInput">Make:</label>
+                        <input type="text" id="assetMakeInput" name="make" placeholder="e.g., Newton" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="assetTypeInput">Type:</label>
+                        <input type="text" id="assetTypeInput" name="type" placeholder="e.g., Transformer" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="assetVolumeInput">Volume (Litres):</label>
+                        <input type="number" id="assetVolumeInput" name="volume" step="any" placeholder="e.g., 2111" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="assetKVARatingInput">KVA Rating:</label>
+                        <input type="number" id="assetKVARatingInput" name="kVADating" placeholder="e.g., 1000" class="rounded-lg">
+                    </div>
+                    <div class="md:col-span-2 flex justify-end gap-4 mt-6">
+                        <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                            Create Asset
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -596,7 +601,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Global Firebase variables
         let app;
@@ -608,6 +613,7 @@
         let currentSiteName = 'None Selected'; // Stores the name of the currently selected site
         let currentAssetId = null; // Stores the ID of the currently selected asset
         let currentAssetName = 'None Selected'; // Stores the name of the currently selected asset
+        let currentAssetDetails = {}; // Stores one-time fill details for the current asset
 
         // UI Elements
         const newEntryBtn = document.getElementById('newEntryBtn');
@@ -631,10 +637,10 @@
         // Site & Asset Management UI Elements
         const siteSelect = document.getElementById('siteSelect');
         const createSiteBtn = document.getElementById('createSiteBtn');
-        const siteModal = document.getElementById('siteModal'); // Renamed from jobModal
-        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn'); // Renamed from closeJobModalBtn
-        const newSiteForm = document.getElementById('newSiteForm'); // Renamed from newJobForm
-        const newSiteNameInput = document.getElementById('newSiteName'); // Renamed from newJobName
+        const siteModal = document.getElementById('siteModal');
+        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn');
+        const newSiteForm = document.getElementById('newSiteForm');
+        const newSiteNameInput = document.getElementById('newSiteName');
 
         const assetSelect = document.getElementById('assetSelect');
         const createAssetBtn = document.getElementById('createAssetBtn');
@@ -646,6 +652,12 @@
         const currentAssetNameDisplay = document.getElementById('currentAssetNameDisplay');
         const assetSelectionRow = document.getElementById('assetSelectionRow');
 
+        // Asset Details Display Elements
+        const assetSerialNoDisplay = document.getElementById('assetSerialNo');
+        const assetMakeDisplay = document.getElementById('assetMake');
+        const assetTypeDisplay = document.getElementById('assetType');
+        const assetVolumeDisplay = document.getElementById('assetVolume');
+        const assetKVARatingDisplay = document.getElementById('assetKVARating');
 
         let allTestData = []; // To store all fetched data for graphing
 
@@ -819,6 +831,13 @@
                     currentAssetId = null;
                     currentAssetName = 'None Selected';
                     currentAssetNameDisplay.textContent = currentAssetName;
+                    // Clear asset details display
+                    assetSerialNoDisplay.textContent = 'N/A';
+                    assetMakeDisplay.textContent = 'N/A';
+                    assetTypeDisplay.textContent = 'N/A';
+                    assetVolumeDisplay.textContent = 'N/A';
+                    assetKVARatingDisplay.textContent = 'N/A';
+
                     showMessageBox("No sites found. Please create your first site!", false);
                     siteModal.style.display = 'flex'; // Automatically open site creation modal
                 }
@@ -843,6 +862,13 @@
             currentAssetId = null; // Reset asset selection when site changes
             currentAssetName = 'None Selected';
             currentAssetNameDisplay.textContent = currentAssetName;
+            // Clear asset details display
+            assetSerialNoDisplay.textContent = 'N/A';
+            assetMakeDisplay.textContent = 'N/A';
+            assetTypeDisplay.textContent = 'N/A';
+            assetVolumeDisplay.textContent = 'N/A';
+            assetKVARatingDisplay.textContent = 'N/A';
+
             loadAssets(); // Load assets for the newly selected site
             showMessageBox(`Site "${siteName}" selected.`);
         }
@@ -869,7 +895,7 @@
                 siteModal.style.display = 'none'; // Hide modal
                 newSiteForm.reset(); // Clear form
                 await loadSites(); // Reload sites to update dropdown
-                selectSite(docRef.id, siteName); // Automatically select the new site (fixed jobName to siteName)
+                selectSite(docRef.id, siteName); // Automatically select the new site
             } catch (e) {
                 console.error("Error creating site: ", e);
                 showMessageBox(`Error creating site: ${e.message}`, true);
@@ -923,6 +949,17 @@
                         // Re-select the previously active asset if it still exists
                         assetSelect.value = currentAssetId;
                         currentAssetNameDisplay.textContent = currentAssetName;
+                        // Reload asset details for the re-selected asset
+                        const assetDocRef = doc(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`, currentAssetId);
+                        const assetDocSnap = await getDoc(assetDocRef);
+                        if (assetDocSnap.exists()) {
+                            currentAssetDetails = assetDocSnap.data();
+                            assetSerialNoDisplay.textContent = currentAssetDetails.serialNo || 'N/A';
+                            assetMakeDisplay.textContent = currentAssetDetails.make || 'N/A';
+                            assetTypeDisplay.textContent = currentAssetDetails.type || 'N/A';
+                            assetVolumeDisplay.textContent = currentAssetDetails.volume !== undefined ? currentAssetDetails.volume : 'N/A';
+                            assetKVARatingDisplay.textContent = currentAssetDetails.kVADating !== undefined ? currentAssetDetails.kVADating : 'N/A';
+                        }
                         setupFirestoreListener(); // Re-attach listener for current asset
                     }
                 } else {
@@ -930,6 +967,13 @@
                     currentAssetId = null;
                     currentAssetName = 'None Selected';
                     currentAssetNameDisplay.textContent = currentAssetName;
+                    // Clear asset details display
+                    assetSerialNoDisplay.textContent = 'N/A';
+                    assetMakeDisplay.textContent = 'N/A';
+                    assetTypeDisplay.textContent = 'N/A';
+                    assetVolumeDisplay.textContent = 'N/A';
+                    assetKVARatingDisplay.textContent = 'N/A';
+
                     showMessageBox(`No assets found for site "${currentSiteName}". Please create your first asset!`, false);
                     assetModal.style.display = 'flex'; // Automatically open asset creation modal
                 }
@@ -946,11 +990,41 @@
          * @param {string} assetId - The ID of the asset to select.
          * @param {string} assetName - The name of the asset to select.
          */
-        function selectAsset(assetId, assetName) {
+        async function selectAsset(assetId, assetName) {
             currentAssetId = assetId;
             currentAssetName = assetName;
             currentAssetNameDisplay.textContent = currentAssetName;
             assetSelect.value = assetId; // Ensure dropdown reflects selection
+
+            // Fetch and display asset details
+            if (db && userId && currentSiteId && currentAssetId) {
+                const assetDocRef = doc(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`, currentAssetId);
+                const assetDocSnap = await getDoc(assetDocRef);
+                if (assetDocSnap.exists()) {
+                    currentAssetDetails = assetDocSnap.data();
+                    assetSerialNoDisplay.textContent = currentAssetDetails.serialNo || 'N/A';
+                    assetMakeDisplay.textContent = currentAssetDetails.make || 'N/A';
+                    assetTypeDisplay.textContent = currentAssetDetails.type || 'N/A';
+                    assetVolumeDisplay.textContent = currentAssetDetails.volume !== undefined ? currentAssetDetails.volume : 'N/A';
+                    assetKVARatingDisplay.textContent = currentAssetDetails.kVADating !== undefined ? currentAssetDetails.kVADating : 'N/A';
+                } else {
+                    console.warn("Selected asset document does not exist:", currentAssetId);
+                    currentAssetDetails = {};
+                    assetSerialNoDisplay.textContent = 'N/A';
+                    assetMakeDisplay.textContent = 'N/A';
+                    assetTypeDisplay.textContent = 'N/A';
+                    assetVolumeDisplay.textContent = 'N/A';
+                    assetKVARatingDisplay.textContent = 'N/A';
+                }
+            } else {
+                currentAssetDetails = {};
+                assetSerialNoDisplay.textContent = 'N/A';
+                assetMakeDisplay.textContent = 'N/A';
+                assetTypeDisplay.textContent = 'N/A';
+                assetVolumeDisplay.textContent = 'N/A';
+                assetKVARatingDisplay.textContent = 'N/A';
+            }
+
             setupFirestoreListener(); // Load test data for the newly selected asset
             showMessageBox(`Asset "${assetName}" selected.`);
         }
@@ -958,8 +1032,9 @@
         /**
          * Creates a new asset in Firestore under the current site.
          * @param {string} assetName - The name of the new asset.
+         * @param {Object} details - One-time fill details for the asset.
          */
-        async function createNewAsset(assetName) {
+        async function createNewAsset(assetName, details) {
             if (!db || !userId || !currentSiteId) {
                 showMessageBox("Please select a site first before creating an asset.", true);
                 return;
@@ -970,7 +1045,8 @@
                 console.log("Attempting to create asset at path:", assetsPath); // Log the path
                 const docRef = await addDoc(collection(db, assetsPath), {
                     assetName: assetName,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    ...details // Add one-time fill details here
                 });
                 console.log("New asset created with ID: ", docRef.id);
                 showMessageBox(`Asset "${assetName}" created successfully!`);
@@ -1015,16 +1091,17 @@
                 allTestData = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
-                    if (data.dateOfTest) {
+                    // Use dateOfSample for sorting as dateOfTest is removed
+                    if (data.dateOfSample) {
                         allTestData.push({ id: doc.id, ...data });
                     } else {
-                        console.warn("Document missing dateOfTest, skipping:", doc.id);
+                        console.warn("Document missing dateOfSample, skipping:", doc.id);
                     }
                 });
 
                 allTestData.sort((a, b) => {
-                    const dateA = new Date(a.dateOfTest);
-                    const dateB = new Date(b.dateOfTest);
+                    const dateA = new Date(a.dateOfSample); // Sort by dateOfSample
+                    const dateB = new Date(b.dateOfSample); // Sort by dateOfSample
                     return dateA - dateB;
                 });
 
@@ -1092,357 +1169,4 @@
 
         // --- UI Event Handlers ---
 
-        newEntryBtn.addEventListener('click', () => {
-            if (!currentSiteId || !currentAssetId) {
-                showMessageBox("Please select a site and an asset before adding a test entry.", true);
-                return;
-            }
-            oilTestForm.reset();
-            dataEntryModal.style.display = 'flex';
-        });
-
-        viewDataBtn.addEventListener('click', () => {
-            if (!currentSiteId || !currentAssetId) {
-                showMessageBox("Please select a site and an asset to view data.", true);
-                return;
-            }
-            // Data is already loaded by onSnapshot, just ensure list is visible
-            filterAndDisplayData();
-        });
-
-        closeButton.addEventListener('click', () => {
-            dataEntryModal.style.display = 'none';
-        });
-
-        cancelEntryBtn.addEventListener('click', () => {
-            dataEntryModal.style.display = 'none';
-        });
-
-        window.addEventListener('click', (event) => {
-            if (event.target == dataEntryModal) {
-                dataEntryModal.style.display = 'none';
-            }
-            if (event.target == siteModal) {
-                siteModal.style.display = 'none';
-            }
-            if (event.target == assetModal) {
-                assetModal.style.display = 'none';
-            }
-        });
-
-        oilTestForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const formData = new FormData(oilTestForm);
-            const data = {};
-            for (let [key, value] of formData.entries()) {
-                if (!isNaN(parseFloat(value)) && isFinite(value) && key !== 'dateOfNextSample' && key !== 'colour' && key !== 'appearance' && key !== 'odour' && key !== 'fibres' && key !== 'turbidity' && key !== 'pcbsResult' && key !== 'recommendations') {
-                    data[key] = parseFloat(value);
-                } else {
-                    data[key] = value;
-                }
-            }
-            addTestEntry(data);
-        });
-
-        graphParamSelect.addEventListener('change', (event) => {
-            drawChart(allTestData, event.target.value);
-        });
-
-        downloadGraphBtn.addEventListener('click', () => {
-            const dataURL = oilTrendChartCanvas.toDataURL('image/png');
-            const a = document.createElement('a');
-            a.href = dataURL;
-            a.download = `transformer_oil_trend_${graphParamSelect.value}_${new Date().toISOString().slice(0,10)}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showMessageBox("Graph downloaded successfully!");
-        });
-
-        searchDataInput.addEventListener('input', filterAndDisplayData);
-        clearSearchBtn.addEventListener('click', () => {
-            searchDataInput.value = '';
-            filterAndDisplayData();
-        });
-
-        /**
-         * Filters the test data based on search input and displays it.
-         */
-        function filterAndDisplayData() {
-            const searchTerm = searchDataInput.value.toLowerCase().trim();
-            let filteredData = allTestData;
-
-            if (searchTerm) {
-                filteredData = allTestData.filter(entry => {
-                    return (entry.assetNo && String(entry.assetNo).toLowerCase().includes(searchTerm)) ||
-                           (entry.dateOfTest && String(entry.dateOfTest).toLowerCase().includes(searchTerm)) ||
-                           (entry.type && String(entry.type).toLowerCase().includes(searchTerm));
-                });
-            }
-            displayTestData(filteredData);
-        }
-
-        /**
-         * Displays the fetched test data in the list.
-         * @param {Array<Object>} dataArray - Array of test data objects to display (can be filtered).
-         */
-        function displayTestData(dataArray) {
-            dataList.innerHTML = '';
-            if (dataArray.length === 0) {
-                noDataMessage.classList.remove('hidden');
-            } else {
-                noDataMessage.classList.add('hidden');
-                dataArray.forEach(entry => {
-                    const div = document.createElement('div');
-                    div.className = 'data-list-item';
-                    div.innerHTML = `
-                        <span class="date">Date: ${entry.dateOfTest || 'N/A'}</span>
-                        <span>Asset No: ${entry.assetNo || 'N/A'}</span>
-                        <span>Dielectric Strength: ${entry.dielectricStrength !== undefined ? entry.dielectricStrength : 'N/A'} MV/m</span>
-                        <span>Water Content: ${entry.waterContent !== undefined ? entry.waterContent : 'N/A'} mg/kg</span>
-                        <span>Total DGA: ${entry.totalDissolvedGas !== undefined ? entry.totalDissolvedGas : 'N/A'} ppm</span>
-                        <button class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-lg shadow-md delete-btn" data-id="${entry.id}">Delete</button>
-                    `;
-                    dataList.appendChild(div);
-                });
-
-                dataList.querySelectorAll('.delete-btn').forEach(button => {
-                    button.addEventListener('click', (event) => {
-                        const docId = event.target.dataset.id;
-                        showConfirmationModal('Are you sure you want to delete this entry?', () => {
-                            deleteTestEntry(docId);
-                        });
-                    });
-                });
-            }
-        }
-
-        function showConfirmationModal(message, onConfirm) {
-            const modalHtml = `
-                <div id="confirmationModal" class="modal" style="display: flex;">
-                    <div class="modal-content max-w-sm text-center p-8">
-                        <p class="text-xl mb-6">${message}</p>
-                        <div class="flex justify-center gap-4">
-                            <button id="confirmYes" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">Yes</button>
-                            <button id="confirmNo" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">No</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-            const confirmationModal = document.getElementById('confirmationModal');
-            document.getElementById('confirmYes').onclick = () => {
-                onConfirm();
-                confirmationModal.remove();
-            };
-            document.getElementById('confirmNo').onclick = () => {
-                confirmationModal.remove();
-            };
-            confirmationModal.onclick = (event) => {
-                if (event.target === confirmationModal) {
-                    confirmationModal.remove();
-                }
-            };
-        }
-
-        // --- Canvas Drawing (Graphing) ---
-
-        function drawChart(data, parameter) {
-            ctx.clearRect(0, 0, oilTrendChartCanvas.width, oilTrendChartCanvas.height);
-
-            if (data.length === 0) {
-                ctx.font = '16px Inter';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#718096';
-                ctx.fillText('No data to display. Add entries to see trends.', oilTrendChartCanvas.width / 2, oilTrendChartCanvas.height / 2);
-                return;
-            }
-
-            const dates = data.map(entry => new Date(entry.dateOfTest));
-            const values = data.map(entry => entry[parameter]).filter(val => val !== undefined && val !== null);
-
-            if (values.length < 2) {
-                ctx.font = '16px Inter';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#718096';
-                ctx.fillText('Need at least 2 data points for a trend graph.', oilTrendChartCanvas.width / 2, oilTrendChartCanvas.height / 2);
-                return;
-            }
-
-            const minValue = Math.min(...values);
-            const maxValue = Math.max(...values);
-            const valueRange = maxValue - minValue;
-
-            const canvasWidth = oilTrendChartCanvas.width;
-            const canvasHeight = oilTrendChartCanvas.height;
-            const padding = 50;
-
-            const xScale = (canvasWidth - 2 * padding) / (dates.length - 1);
-            const yScale = (canvasHeight - 2 * padding) / (valueRange === 0 ? 1 : valueRange);
-
-            ctx.beginPath();
-            ctx.strokeStyle = '#a0aec0';
-            ctx.lineWidth = 2;
-
-            ctx.moveTo(padding, canvasHeight - padding);
-            ctx.lineTo(canvasWidth - padding, canvasHeight - padding);
-            ctx.moveTo(padding, canvasHeight - padding);
-            ctx.lineTo(padding, padding);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.strokeStyle = '#4299e1';
-            ctx.lineWidth = 3;
-            ctx.lineJoin = 'round';
-            ctx.lineCap = 'round';
-
-            data.forEach((entry, i) => {
-                const date = new Date(entry.dateOfTest);
-                const value = entry[parameter];
-
-                if (value === undefined || value === null) return;
-
-                const x = padding + i * xScale;
-                const y = canvasHeight - padding - (value - minValue) * yScale;
-
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-
-                ctx.fillStyle = '#4299e1';
-                ctx.beginPath();
-                ctx.arc(x, y, 5, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.stroke();
-
-            ctx.fillStyle = '#2d3748';
-            ctx.font = '12px Inter';
-            ctx.textAlign = 'center';
-
-            const maxLabels = Math.floor((canvasWidth - 2 * padding) / 80);
-            const labelInterval = Math.ceil(dates.length / maxLabels);
-
-            dates.forEach((date, i) => {
-                if (i % labelInterval === 0 || i === dates.length - 1) {
-                    const x = padding + i * xScale;
-                    ctx.fillText(date.toLocaleDateString(), x, canvasHeight - padding + 20);
-                }
-            });
-
-            ctx.textAlign = 'right';
-            const numYLabels = 5;
-            for (let i = 0; i <= numYLabels; i++) {
-                const yValue = minValue + (valueRange / numYLabels) * i;
-                const y = canvasHeight - padding - (yValue - minValue) * yScale;
-                ctx.fillText(yValue.toFixed(2), padding - 10, y + 4);
-            }
-
-            ctx.textAlign = 'center';
-            ctx.font = '14px Inter';
-            ctx.fillText('Date of Test', canvasWidth / 2, canvasHeight - 10);
-
-            ctx.save();
-            ctx.translate(padding / 2, canvasHeight / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillText(parameter.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 0, 0);
-            ctx.restore();
-        }
-
-        function resizeCanvas() {
-            oilTrendChartCanvas.width = oilTrendChartCanvas.offsetWidth;
-            oilTrendChartCanvas.height = 400;
-            drawChart(allTestData, graphParamSelect.value);
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-
-        // --- Site & Asset Management Event Listeners ---
-        createSiteBtn.addEventListener('click', () => {
-            newSiteNameInput.value = ''; // Clear input
-            siteModal.style.display = 'flex'; // Show site creation modal
-        });
-
-        closeSiteModalBtn.addEventListener('click', () => {
-            siteModal.style.display = 'none'; // Hide site creation modal
-        });
-
-        newSiteForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const siteName = newSiteNameInput.value.trim();
-            if (siteName) {
-                await createNewSite(siteName);
-            } else {
-                showMessageBox("Site name cannot be empty.", true);
-            }
-        });
-
-        siteSelect.addEventListener('change', (event) => {
-            const selectedSiteId = event.target.value;
-            const selectedSiteName = event.target.options[event.target.selectedIndex].text;
-            if (selectedSiteId) {
-                selectSite(selectedSiteId, selectedSiteName);
-            } else {
-                currentSiteId = null;
-                currentSiteName = 'None Selected';
-                currentSiteNameDisplay.textContent = currentSiteName;
-                currentAssetId = null;
-                currentAssetName = 'None Selected';
-                currentAssetNameDisplay.textContent = currentAssetName;
-                allTestData = []; // Clear displayed data
-                filterAndDisplayData(); // Update UI
-                drawChart(allTestData, graphParamSelect.value); // Clear graph
-                showMessageBox("Please select or create a site.", true);
-            }
-        });
-
-        createAssetBtn.addEventListener('click', () => {
-            if (!currentSiteId) {
-                showMessageBox("Please select a site before creating an asset.", true);
-                return;
-            }
-            newAssetNameInput.value = ''; // Clear input
-            assetModal.style.display = 'flex'; // Show asset creation modal
-        });
-
-        closeAssetModalBtn.addEventListener('click', () => {
-            assetModal.style.display = 'none'; // Hide asset creation modal
-        });
-
-        newAssetForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const assetName = newAssetNameInput.value.trim();
-            if (assetName) {
-                await createNewAsset(assetName);
-            } else {
-                showMessageBox("Asset name cannot be empty.", true);
-            }
-        });
-
-        assetSelect.addEventListener('change', (event) => {
-            const selectedAssetId = event.target.value;
-            const selectedAssetName = event.target.options[event.target.selectedIndex].text;
-            if (selectedAssetId) {
-                selectAsset(selectedAssetId, selectedAssetName);
-            } else {
-                currentAssetId = null;
-                currentAssetName = 'None Selected';
-                currentAssetNameDisplay.textContent = currentAssetName;
-                allTestData = []; // Clear displayed data
-                filterAndDisplayData(); // Update UI
-                drawChart(allTestData, graphParamSelect.value); // Clear graph
-                showMessageBox("Please select or create an asset.", true);
-            }
-        });
-
-        // --- Initial Setup ---
-        window.onload = function() {
-            initializeFirebase();
-            resizeCanvas();
-        };
-    </script>
-</body>
-</html>
+        newEn
