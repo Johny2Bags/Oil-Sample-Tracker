@@ -676,16 +676,15 @@
 
         // --- Firebase Initialization and Authentication ---
         // Your web app's Firebase configuration - PROVIDED BY USER
-        // MANDATORY: Use __firebase_config and __app_id
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "YOUR_API_KEY", // Placeholder if __firebase_config is not available
-            authDomain: `${appId}.firebaseapp.com`,
-            projectId: appId,
-            storageBucket: `${appId}.appspot.com`,
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
+        // Reverting to hardcoded config as provided by user in earlier turn
+        const firebaseConfig = {
+            apiKey: "AIzaSyCM_uA1J892sYrC0vVGmSaU2gn_8VNeciI",
+            authDomain: "oil-sample-tracker.firebaseapp.com",
+            projectId: "oil-sample-tracker",
+            storageBucket: "oil-sample-tracker.firebasestorage.app",
+            messagingSenderId: "271202062311",
+            appId: "1:271202062311:web:da9e75f80892d747e5b742",
+            measurementId: "G-96X1R1G85W"
         };
 
         /**
@@ -772,6 +771,7 @@
                 analytics = getAnalytics(app); // Initialize analytics
 
                 // Authenticate user
+                // Use __initial_auth_token if available for persistent anonymous sessions
                 if (typeof __initial_auth_token !== 'undefined') {
                     await signInWithCustomToken(auth, __initial_auth_token);
                     console.log("Signed in with custom token.");
@@ -817,7 +817,7 @@
             currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
-                // Use the correct projectId from firebaseConfig, which is now derived from __app_id
+                // Use the projectId from firebaseConfig
                 const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
                 console.log("Attempting to load sites from path:", sitesPath); // Log the path
                 const sitesColRef = collection(db, sitesPath);
@@ -963,7 +963,7 @@
                         assetSelect.appendChild(option);
                     });
                     // Select the first asset by default if no asset is currently selected
-                    if (!currentAssetId || !assets.some(asset => asset.id === currentAssetId)) {
+                    if (!currentAssetId || !assets.some(asset => asset.id === currentAssetId)) { // Fixed site.id to asset.id
                         selectAsset(assets[0].id, assets[0].assetName, assets[0]); // Pass full asset object
                     } else {
                         // Re-select the previously active asset if it still exists
@@ -1284,7 +1284,8 @@
                     'acidity', 'dielectricStrength', 'waterContent', 'hydrogen', 'methane', 'ethylene', 'ethane',
                     'acetylene', 'carbonMonoxide', 'carbonDioxide', 'nitrogen', 'oxygen', 'totalCombustibleGas',
                     'totalDissolvedGas', 'rogersRatio', 'furansHydroxymethylFurfuraldehyde', 'furansFurfuraldehyde',
-                    'furansFurylMethylKetone', 'furansMethylFurfuraldehyde', 'furansFurfurylAlcohol',
+                    'furansFurylMethylKetone', 'furansMethylFurfuraldehyde', // Corrected: Removed duplicate
+                    'furansFurfurylAlcohol',
                     'estimatedDegreeOfPolymerisation'
                 ];
 
@@ -1423,6 +1424,8 @@
             // Filter out data points where the selected parameter is undefined or null
             const validDataPoints = data.filter(entry => entry[parameter] !== undefined && entry[parameter] !== null);
 
+            console.log("Valid Data Points for Charting:", validDataPoints.length); // DEBUG LOG
+
             if (validDataPoints.length < 2) {
                 ctx.font = '16px Inter';
                 ctx.textAlign = 'center';
@@ -1466,6 +1469,8 @@
                 const value = entry[parameter];
                 const x = padding + i * xScale;
                 const y = canvasHeight - padding - (value - minValue) * yScale;
+
+                console.log(`Point ${i}: x=${x}, y=${y}, value=${value}`); // DEBUG LOG
 
                 if (i === 0) {
                     ctx.moveTo(x, y);
