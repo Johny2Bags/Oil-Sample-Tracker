@@ -303,7 +303,7 @@
         <div class="graph-controls">
             <label for="graphParamSelect" class="block text-gray-700 font-bold mb-0">Select Parameter:</label>
             <select id="graphParamSelect" class="p-2 border rounded-lg bg-gray-100">
-                <option value="dielectricStrength">Dielectric Strength (MV/m)</option>
+                <option value="dielectricStrength">Withstood (kV average)</option>
                 <option value="acidity">Acidity (mg KOH/g)</option>
                 <option value="waterContent">Water Content (mg/kg)</option>
                 <option value="hydrogen">Hydrogen (ppm)</option>
@@ -315,7 +315,16 @@
                 <option value="carbonDioxide">Carbon Dioxide ($CO_2$)</option>
                 <option value="oxygen">Oxygen ($O_2$)</option>
                 <option value="nitrogen">Nitrogen ($N_2$)</option>
+                <option value="totalCombustibleGas">Total Combustible Gas (ppm)</option>
                 <option value="totalDissolvedGas">Total Dissolved Gas (ppm)</option>
+                <option value="rogersRatio">Rogers Ratio</option>
+                <option value="furansHydroxymethylFurfuraldehyde">Furans-5-hydroxy-methyl-2-furfuraldehyde</option>
+                <option value="furansFurfuraldehyde">Furans-2-furfuraldehyde</option>
+                <option value="furansFurylMethylKetone">Furans-2-furyl-methyl-ketone</option>
+                <option value="furansMethylFurfuraldehyde">Furans-5-methyl-2-furfuraldehyde</option>
+                <option value="furansFurfurylAlcohol">Furans-2-furfuryl-alcohol</option>
+                <option value="estimatedDegreeOfPolymerisation">Estimated Degree of Polymerisation</option>
+                <option value="pcbsResult">Polychlorinated biphenyl (ppm)</option>
                 <!-- Add more parameters here if needed -->
             </select>
             <button id="downloadGraphBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
@@ -343,15 +352,11 @@
                 <span class="close-button">&times;</span>
                 <h2 class="text-2xl mb-4">New Test Entry</h2>
                 <form id="oilTestForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- General Information -->
+                    <!-- General Information (Asset Specific - pre-filled) -->
                     <div class="md:col-span-2 text-lg font-semibold text-blue-700">General Information</div>
                     <div class="form-group">
                         <label for="dateOfSample">Date of Sample:</label>
                         <input type="date" id="dateOfSample" name="dateOfSample" required class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="dateOfTest">Date of Test:</label>
-                        <input type="date" id="dateOfTest" name="dateOfTest" required class="rounded-lg">
                     </div>
                     <div class="form-group">
                         <label for="assetNo">Asset No:</label>
@@ -386,58 +391,18 @@
                         <input type="number" id="kVADating" name="kVADating" placeholder="e.g., 1000" class="rounded-lg">
                     </div>
 
-                    <!-- Physical and Chemical Tests -->
-                    <div class="md:col-span-2 text-lg font-semibold text-blue-700 mt-6">Physical and Chemical Tests</div>
-                    <div class="form-group">
-                        <label for="compound">Compound:</label>
-                        <select id="compound" name="compound" class="rounded-lg">
-                            <option value="Satisfactory">Satisfactory</option>
-                            <option value="Unsatisfactory">Unsatisfactory</option>
-                            <option value="Action Required">Action Required</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="sediment">Sediment:</label>
-                        <select id="sediment" name="sediment" class="rounded-lg">
-                            <option value="Satisfactory">Satisfatory</option>
-                            <option value="Unsatisfactory">Unsatisfactory</option>
-                            <option value="Action Required">Action Required</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="oilLevel">Oil Level:</label>
-                        <select id="oilLevel" name="oilLevel" class="rounded-lg">
-                            <option value="Satisfactory">Satisfactory</option>
-                            <option value="Unsatisfactory">Unsatisfactory</option>
-                            <option value="Action Required">Action Required</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="paint">Paint:</label>
-                        <select id="paint" name="paint" class="rounded-lg">
-                            <option value="Satisfactory">Satisfactory</option>
-                            <option value="Unsatisfactory">Unsatisfactory</option>
-                            <option value="Action Required">Action Required</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="breather">Breather:</label>
-                        <select id="breather" name="breather" class="rounded-lg">
-                            <option value="Satisfactory">Satisfactory</option>
-                            <option value="Unsatisfactory">Unsatisfactory</option>
-                            <option value="Action Required">Action Required</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="dielectricStrength">Dielectric Strength (MV/m):</label>
-                        <input type="number" id="dielectricStrength" name="dielectricStrength" step="any" placeholder="e.g., 0.09" class="rounded-lg">
-                    </div>
+                    <!-- Oil Test Results -->
+                    <div class="md:col-span-2 text-lg font-semibold text-blue-700 mt-6">Oil Test Results</div>
                     <div class="form-group">
                         <label for="acidity">Acidity (mg KOH/g):</label>
                         <input type="number" id="acidity" name="acidity" step="any" placeholder="e.g., 0.04" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="waterContent">Water Content (mg/kg):</label>
+                        <label for="dielectricStrength">Withstood (kV average):</label>
+                        <input type="number" id="dielectricStrength" name="dielectricStrength" step="any" placeholder="e.g., 0.09" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="waterContent">Water Content (mg/Kg):</label>
                         <input type="number" id="waterContent" name="waterContent" step="any" placeholder="e.g., 94" class="rounded-lg">
                     </div>
                     <div class="form-group">
@@ -453,85 +418,98 @@
                         <input type="text" id="odour" name="odour" placeholder="e.g., Typical" class="rounded-lg">
                     </div>
                     <div class="form-group">
+                        <label for="sediment">Sediment:</label>
+                        <select id="sediment" name="sediment" class="rounded-lg">
+                            <option value="Satisfactory">Satisfactory</option>
+                            <option value="Unsatisfactory">Unsatisfactory</option>
+                            <option value="Action Required">Action Required</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="fibres">Fibres:</label>
                         <input type="text" id="fibres" name="fibres" placeholder="e.g., Fine" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="turbidity">Turbidity:</label>
-                        <input type="text" id="turbidity" name="turbidity" placeholder="e.g., Paint trace" class="rounded-lg">
-                    </div>
-
-                    <!-- Dissolved Gas Analysis (DGA) -->
-                    <div class="md:col-span-2 text-lg font-semibold text-blue-700 mt-6">Dissolved Gas Analysis (DGA) - ppm</div>
-                    <div class="form-group">
-                        <label for="hydrogen">Hydrogen ($H_2$):</label>
+                        <label for="hydrogen">Hydrogen (ppm):</label>
                         <input type="number" id="hydrogen" name="hydrogen" step="any" placeholder="e.g., 0" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="methane">Methane ($CH_4$):</label>
+                        <label for="methane">Methane (ppm):</label>
                         <input type="number" id="methane" name="methane" step="any" placeholder="e.g., 2" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="ethane">Ethane ($C_2H_6$):</label>
-                        <input type="number" id="ethane" name="ethane" step="any" placeholder="e.g., 6" class="rounded-lg">
-                    </div>
-                    <div class="form-group">
-                        <label for="ethylene">Ethylene ($C_2H_4$):</label>
+                        <label for="ethylene">Ethylene (ppm):</label>
                         <input type="number" id="ethylene" name="ethylene" step="any" placeholder="e.g., 175" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="acetylene">Acetylene ($C_2H_2$):</label>
+                        <label for="ethane">Ethane (ppm):</label>
+                        <input type="number" id="ethane" name="ethane" step="any" placeholder="e.g., 6" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="acetylene">Acetylene (ppm):</label>
                         <input type="number" id="acetylene" name="acetylene" step="any" placeholder="e.g., 382" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="carbonMonoxide">Carbon Monoxide ($CO$):</label>
+                        <label for="carbonMonoxide">Carbon Monoxide (ppm):</label>
                         <input type="number" id="carbonMonoxide" name="carbonMonoxide" step="any" placeholder="e.g., 0" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="carbonDioxide">Carbon Dioxide ($CO_2$):</label>
+                        <label for="carbonDioxide">Carbon Dioxide (ppm):</label>
                         <input type="number" id="carbonDioxide" name="carbonDioxide" step="any" placeholder="e.g., 6" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="oxygen">Oxygen ($O_2$):</label>
+                        <label for="nitrogen">Nitrogen (ppm):</label>
+                        <input type="number" id="nitrogen" name="nitrogen" step="any" placeholder="e.g., 244" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="oxygen">Oxygen (ppm):</label>
                         <input type="number" id="oxygen" name="oxygen" step="any" placeholder="e.g., 119707" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="nitrogen">Nitrogen ($N_2$):</label>
-                        <input type="number" id="nitrogen" name="nitrogen" step="any" placeholder="e.g., 244" class="rounded-lg">
+                        <label for="totalCombustibleGas">Total Combustible Gas:</label>
+                        <input type="number" id="totalCombustibleGas" name="totalCombustibleGas" step="any" placeholder="e.g., 550" class="rounded-lg">
                     </div>
                     <div class="form-group">
                         <label for="totalDissolvedGas">Total Dissolved Gas:</label>
                         <input type="number" id="totalDissolvedGas" name="totalDissolvedGas" step="any" placeholder="e.g., 164159" class="rounded-lg">
                     </div>
+                    <div class="form-group">
+                        <label for="rogersRatio">Rogers Ratio:</label>
+                        <input type="number" id="rogersRatio" name="rogersRatio" step="any" placeholder="e.g., 0.5" class="rounded-lg">
+                    </div>
 
                     <!-- Furan Analysis -->
                     <div class="md:col-span-2 text-lg font-semibold text-blue-700 mt-6">Furan Analysis</div>
                     <div class="form-group">
-                        <label for="furanolMethylKetone">2-Furanol (methyl-ketone):</label>
-                        <input type="number" id="furanolMethylKetone" name="furanolMethylKetone" step="any" placeholder="e.g., 0.020" class="rounded-lg">
+                        <label for="furansHydroxymethylFurfuraldehyde">5-Hydroxymethyl-2-furfuraldehyde:</label>
+                        <input type="number" id="furansHydroxymethylFurfuraldehyde" name="furansHydroxymethylFurfuraldehyde" step="any" placeholder="e.g., 0.020" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="furfuraldehyde">2-Furfuraldehyde:</label>
-                        <input type="number" id="furfuraldehyde" name="furfuraldehyde" step="any" class="rounded-lg">
+                        <label for="furansFurfuraldehyde">2-Furfuraldehyde:</label>
+                        <input type="number" id="furansFurfuraldehyde" name="furansFurfuraldehyde" step="any" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="acetylfuran">2-Acetylfuran:</label>
-                        <input type="number" id="acetylfuran" name="acetylfuran" step="any" class="rounded-lg">
+                        <label for="furansFurylMethylKetone">2-Furyl-methyl-ketone:</label>
+                        <input type="number" id="furansFurylMethylKetone" name="furansFurylMethylKetone" step="any" placeholder="e.g., 0.020" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="furanolAlcohol">2-Furanol (furanyl-alcohol):</label>
-                        <input type="number" id="furanolAlcohol" name="furanolAlcohol" step="any" class="rounded-lg">
+                        <label for="furansMethylFurfuraldehyde">5-Methyl-2-furfuraldehyde:</label>
+                        <input type="number" id="furansMethylFurfuraldehyde" name="furansMethylFurfuraldehyde" step="any" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="hydroxymethylFurfuraldehyde">5-Hydroxymethylfurfuraldehyde:</label>
-                        <input type="number" id="hydroxymethylFurfuraldehyde" name="hydroxymethylFurfuraldehyde" step="any" class="rounded-lg">
+                        <label for="furansFurfurylAlcohol">2-Furfuryl-alcohol:</label>
+                        <input type="number" id="furansFurfurylAlcohol" name="furansFurfurylAlcohol" step="any" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="estimatedDegreeOfPolymerisation">Estimated Degree of Polymerisation:</label>
+                        <input type="number" id="estimatedDegreeOfPolymerisation" name="estimatedDegreeOfPolymerisation" step="any" class="rounded-lg">
                     </div>
 
                     <!-- PCB Analysis -->
                     <div class="md:col-span-2 text-lg font-semibold text-blue-700 mt-6">PCB Analysis</div>
                     <div class="form-group">
-                        <label for="pcbsResult">Polychlorinated biphenyl (PCB):</label>
-                        <input type="text" id="pcbsResult" name="pcbsResult" placeholder="e.g., PCBs not analysed." class="rounded-lg">
+                        <label for="pcbsResult">Polychlorinated biphenyl (ppm):</label>
+                        <input type="text" id="pcbsResult" name="pcbsResult" placeholder="e.g., PCBs not analysed. or 0.1" class="rounded-lg">
                     </div>
 
                     <!-- Recommendations -->
@@ -676,7 +654,7 @@
         const siteSelect = document.getElementById('siteSelect');
         const createSiteBtn = document.getElementById('createSiteBtn');
         const siteModal = document.getElementById('siteModal');
-        const closeSiteModalBtn = document = document.getElementById('closeSiteModalBtn');
+        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn');
         const newSiteForm = document.getElementById('newSiteForm');
         const newSiteNameInput = document.getElementById('newSiteName');
 
@@ -692,7 +670,6 @@
         const currentSiteNameDisplay = document.getElementById('currentSiteNameDisplay');
         const currentAssetNameDisplay = document.getElementById('currentAssetNameDisplay');
         const currentAssetDetailsDisplay = document.getElementById('currentAssetDetailsDisplay'); // New element for asset details
-        const assetSelectionRow = document.getElementById('assetSelectionRow');
 
 
         let allTestData = []; // To store all fetched data for graphing
@@ -1136,7 +1113,7 @@
          */
         function setupFirestoreListener() {
             if (!db || !userId || !currentSiteId || !currentAssetId) {
-                console.warn("Firestore, User ID, Site ID, or Asset ID not ready for listener setup. Skipping data load.");
+                console.warn("Firestore, User ID, or Site ID not ready for listener setup. Skipping data load.");
                 allTestData = []; // Clear data if no site/asset is selected
                 filterAndDisplayData(); // Update display to show no data
                 loadingIndicator.classList.add('hidden');
@@ -1293,8 +1270,18 @@
             const formData = new FormData(oilTestForm);
             const data = {};
             for (let [key, value] of formData.entries()) {
-                if (!isNaN(parseFloat(value)) && isFinite(value) && key !== 'dateOfNextSample' && key !== 'colour' && key !== 'appearance' && key !== 'odour' && key !== 'fibres' && key !== 'turbidity' && key !== 'pcbsResult' && key !== 'recommendations') {
-                    data[key] = parseFloat(value);
+                // Special handling for number fields that might be empty or non-numeric
+                const numberFields = [
+                    'acidity', 'dielectricStrength', 'waterContent', 'hydrogen', 'methane', 'ethylene', 'ethane',
+                    'acetylene', 'carbonMonoxide', 'carbonDioxide', 'nitrogen', 'oxygen', 'totalCombustibleGas',
+                    'totalDissolvedGas', 'rogersRatio', 'furansHydroxymethylFurfuraldehyde', 'furansFurfuraldehyde',
+                    'furansFurylMethylKetone', 'furansMethylFurfuraldehyde', 'furansFurfurylAlcohol',
+                    'estimatedDegreeOfPolymerisation'
+                ];
+
+                if (numberFields.includes(key)) {
+                    const parsedValue = parseFloat(value);
+                    data[key] = isNaN(parsedValue) ? null : parsedValue; // Store null if not a valid number
                 } else {
                     data[key] = value;
                 }
@@ -1338,7 +1325,7 @@
                            (entry.type && String(entry.type).toLowerCase().includes(searchTerm)) ||
                            (entry.testID && String(entry.testID).toLowerCase().includes(searchTerm)) || // Now Insulating Medium
                            (entry.samplePoint && String(entry.samplePoint).toLowerCase().includes(searchTerm)) ||
-                           (entry.dateOfSample && String(entry.dateOfSample).toLowerCase().includes(searchTerm)); // Changed to dateOfSample
+                           (entry.dateOfSample && String(entry.dateOfSample).toLowerCase().includes(searchTerm));
                 });
             }
             displayTestData(filteredData);
@@ -1363,9 +1350,9 @@
                         <span>Serial No: ${entry.serialNo || 'N/A'}</span>
                         <span>Make: ${entry.make || 'N/A'}</span>
                         <span>Type: ${entry.type || 'N/A'}</span>
-                        <span>Dielectric Strength: ${entry.dielectricStrength !== undefined ? entry.dielectricStrength : 'N/A'} MV/m</span>
-                        <span>Water Content: ${entry.waterContent !== undefined ? entry.waterContent : 'N/A'} mg/kg</span>
-                        <span>Total DGA: ${entry.totalDissolvedGas !== undefined ? entry.totalDissolvedGas : 'N/A'} ppm</span>
+                        <span>Withstood: ${entry.dielectricStrength !== undefined && entry.dielectricStrength !== null ? entry.dielectricStrength : 'N/A'} kV avg</span>
+                        <span>Water Content: ${entry.waterContent !== undefined && entry.waterContent !== null ? entry.waterContent : 'N/A'} mg/kg</span>
+                        <span>Total DGA: ${entry.totalDissolvedGas !== undefined && entry.totalDissolvedGas !== null ? entry.totalDissolvedGas : 'N/A'} ppm</span>
                         <button class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-lg shadow-md delete-btn" data-id="${entry.id}">Delete</button>
                     `;
                     dataList.appendChild(div);
@@ -1514,7 +1501,9 @@
             ctx.save();
             ctx.translate(padding / 2, canvasHeight / 2);
             ctx.rotate(-Math.PI / 2);
-            ctx.fillText(parameter.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 0, 0);
+            // Dynamically get the label for the selected parameter
+            const selectedOption = graphParamSelect.options[graphParamSelect.selectedIndex];
+            ctx.fillText(selectedOption.textContent, 0, 0);
             ctx.restore();
         }
 
