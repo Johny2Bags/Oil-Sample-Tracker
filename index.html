@@ -654,7 +654,6 @@
         const siteSelect = document.getElementById('siteSelect');
         const createSiteBtn = document.getElementById('createSiteBtn');
         const siteModal = document.getElementById('siteModal');
-        // FIX: Corrected the assignment of closeSiteModalBtn
         const closeSiteModalBtn = document.getElementById('closeSiteModalBtn');
         const newSiteForm = document.getElementById('newSiteForm');
         const newSiteNameInput = document.getElementById('newSiteName');
@@ -1123,7 +1122,7 @@
          */
         function setupFirestoreListener() {
             if (!db || !userId || !currentSiteId || !currentAssetId) {
-                console.warn("Firestore, User ID, Site ID, or Asset ID not ready for listener setup. Skipping data load.");
+                console.warn("Firestore, User ID, or Site ID not ready for listener setup. Skipping data load.");
                 allTestData = []; // Clear data if no site/asset is selected
                 filterAndDisplayData(); // Update display to show no data
                 loadingIndicator.classList.add('hidden');
@@ -1421,17 +1420,19 @@
                 return;
             }
 
-            // Use dateOfSample for charting as well
-            const dates = data.map(entry => new Date(entry.dateOfSample));
-            const values = data.map(entry => entry[parameter]).filter(val => val !== undefined && val !== null);
+            // Filter out data points where the selected parameter is undefined or null
+            const validDataPoints = data.filter(entry => entry[parameter] !== undefined && entry[parameter] !== null);
 
-            if (values.length < 2) {
+            if (validDataPoints.length < 2) {
                 ctx.font = '16px Inter';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#718096';
                 ctx.fillText('Need at least 2 data points for a trend graph.', oilTrendChartCanvas.width / 2, oilTrendChartCanvas.height / 2);
                 return;
             }
+
+            const dates = validDataPoints.map(entry => new Date(entry.dateOfSample));
+            const values = validDataPoints.map(entry => entry[parameter]);
 
             const minValue = Math.min(...values);
             const maxValue = Math.max(...values);
@@ -1444,28 +1445,25 @@
             const xScale = (canvasWidth - 2 * padding) / (dates.length - 1);
             const yScale = (canvasHeight - 2 * padding) / (valueRange === 0 ? 1 : valueRange);
 
+            // Draw axes
             ctx.beginPath();
             ctx.strokeStyle = '#a0aec0';
             ctx.lineWidth = 2;
-
             ctx.moveTo(padding, canvasHeight - padding);
-            ctx.lineTo(canvasWidth - padding, canvasHeight - padding);
+            ctx.lineTo(canvasWidth - padding, canvasHeight - padding); // X-axis
             ctx.moveTo(padding, canvasHeight - padding);
-            ctx.lineTo(padding, padding);
+            ctx.lineTo(padding, padding); // Y-axis
             ctx.stroke();
 
+            // Draw the line connecting data points
             ctx.beginPath();
-            ctx.strokeStyle = '#4299e1';
+            ctx.strokeStyle = '#4299e1'; // Blue line
             ctx.lineWidth = 3;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
 
-            data.forEach((entry, i) => {
-                const date = new Date(entry.dateOfSample); // Changed to dateOfSample
+            validDataPoints.forEach((entry, i) => {
                 const value = entry[parameter];
-
-                if (value === undefined || value === null) return;
-
                 const x = padding + i * xScale;
                 const y = canvasHeight - padding - (value - minValue) * yScale;
 
@@ -1474,13 +1472,21 @@
                 } else {
                     ctx.lineTo(x, y);
                 }
+            });
+            ctx.stroke(); // Stroke the entire line path
 
-                ctx.fillStyle = '#4299e1';
+            // Draw individual data points (circles) on top of the line
+            validDataPoints.forEach((entry, i) => {
+                const value = entry[parameter];
+                const x = padding + i * xScale;
+                const y = canvasHeight - padding - (value - minValue) * yScale;
+
+                ctx.fillStyle = '#4299e1'; // Blue color for points
                 ctx.beginPath();
-                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.arc(x, y, 5, 0, Math.PI * 2); // Draw a circle
                 ctx.fill();
             });
-            ctx.stroke();
+
 
             ctx.fillStyle = '#2d3748';
             ctx.font = '12px Inter';
