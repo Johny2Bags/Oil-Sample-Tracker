@@ -252,6 +252,31 @@
     <div class="container">
         <h1 class="text-3xl mb-4 text-center">Transformer Oil Test Tracker</h1>
 
+        <!-- Site & Asset Management Section -->
+        <div class="site-asset-management-section bg-gray-100 p-4 rounded-lg mb-6 shadow-sm">
+            <h2 class="text-xl mb-3 text-blue-700">Site & Asset Management</h2>
+            <div class="flex flex-wrap items-center gap-4 mb-3">
+                <label for="siteSelect" class="font-bold text-gray-700 mb-0">Select Site:</label>
+                <select id="siteSelect" class="p-2 border rounded-lg bg-white flex-grow">
+                    <!-- Site options will be dynamically loaded here -->
+                </select>
+                <button id="createSiteBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                    + Create New Site
+                </button>
+            </div>
+            <div class="flex flex-wrap items-center gap-4 mb-3" id="assetSelectionRow">
+                <label for="assetSelect" class="font-bold text-gray-700 mb-0">Select Asset:</label>
+                <select id="assetSelect" class="p-2 border rounded-lg bg-white flex-grow">
+                    <!-- Asset options will be dynamically loaded here -->
+                </select>
+                <button id="createAssetBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                    + Create New Asset
+                </button>
+            </div>
+            <p class="text-md font-semibold text-gray-800">Current Site: <span id="currentSiteNameDisplay" class="text-blue-600">None Selected</span></p>
+            <p class="text-md font-semibold text-gray-800">Current Asset: <span id="currentAssetNameDisplay" class="text-blue-600">None Selected</span></p>
+        </div>
+
         <div class="flex flex-wrap gap-4 mb-6 justify-center">
             <button id="newEntryBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
                 + New Test Entry
@@ -264,7 +289,8 @@
         <div id="loadingIndicator" class="hidden text-center text-blue-600 font-semibold">
             Loading...
         </div>
-        <div id="userIdDisplay" class="user-id-display text-center mb-4"></div>
+        <!-- User ID display is hidden as requested -->
+        <div id="userIdDisplay" class="user-id-display text-center mb-4 hidden"></div>
 
         <!-- Graph Section -->
         <h2 class="text-2xl mt-8 mb-4">Trend Analysis</h2>
@@ -293,7 +319,7 @@
         <canvas id="oilTrendChart"></canvas>
 
         <!-- Data List Section -->
-        <h2 class="text-2xl mt-8 mb-4">All Test Entries</h2>
+        <h2 class="text-2xl mt-8 mb-4">All Test Entries for Current Asset</h2>
         <div class="search-controls">
             <input type="text" id="searchDataInput" placeholder="Search by Asset No, Date, or Type..." class="rounded-lg">
             <button id="clearSearchBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
@@ -302,7 +328,7 @@
         </div>
         <div id="dataList" class="space-y-3">
             <!-- Data entries will be loaded here -->
-            <p class="text-center text-gray-500" id="noDataMessage">No test data available yet. Add a new entry!</p>
+            <p class="text-center text-gray-500" id="noDataMessage">No test data available yet for this asset. Add a new entry!</p>
         </div>
 
         <!-- The Modal for Data Entry -->
@@ -525,6 +551,40 @@
             </div>
         </div>
 
+        <!-- The Modal for New Site Creation -->
+        <div id="siteModal" class="modal">
+            <div class="modal-content max-w-sm text-center p-8">
+                <span class="close-button" id="closeSiteModalBtn">&times;</span>
+                <h2 class="text-2xl mb-4">Create New Site</h2>
+                <form id="newSiteForm">
+                    <div class="form-group mb-6">
+                        <label for="newSiteName" class="block text-gray-700 font-bold mb-2">Site Name:</label>
+                        <input type="text" id="newSiteName" name="newSiteName" placeholder="e.g., London Substation" required class="rounded-lg">
+                    </div>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                        Create Site
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- The Modal for New Asset Creation -->
+        <div id="assetModal" class="modal">
+            <div class="modal-content max-w-sm text-center p-8">
+                <span class="close-button" id="closeAssetModalBtn">&times;</span>
+                <h2 class="text-2xl mb-4">Create New Asset</h2>
+                <form id="newAssetForm">
+                    <div class="form-group mb-6">
+                        <label for="newAssetName" class="block text-gray-700 font-bold mb-2">Asset Name:</label>
+                        <input type="text" id="newAssetName" name="newAssetName" placeholder="e.g., Transformer T1" required class="rounded-lg">
+                    </div>
+                    <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                        Create Asset
+                    </button>
+                </form>
+            </div>
+        </div>
+
         <!-- Custom Message Box -->
         <div id="messageBox" class="message-box"></div>
 
@@ -536,7 +596,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Global Firebase variables
         let app;
@@ -544,6 +604,10 @@
         let auth;
         let analytics;
         let userId = 'anonymous'; // Default to anonymous
+        let currentSiteId = null; // Stores the ID of the currently selected site
+        let currentSiteName = 'None Selected'; // Stores the name of the currently selected site
+        let currentAssetId = null; // Stores the ID of the currently selected asset
+        let currentAssetName = 'None Selected'; // Stores the name of the currently selected asset
 
         // UI Elements
         const newEntryBtn = document.getElementById('newEntryBtn');
@@ -555,7 +619,7 @@
         const dataList = document.getElementById('dataList');
         const noDataMessage = document.getElementById('noDataMessage');
         const loadingIndicator = document.getElementById('loadingIndicator');
-        const userIdDisplay = document.getElementById('userIdDisplay');
+        const userIdDisplay = document.getElementById('userIdDisplay'); // Hidden in HTML, but kept for JS reference
         const messageBox = document.getElementById('messageBox');
         const graphParamSelect = document.getElementById('graphParamSelect');
         const oilTrendChartCanvas = document.getElementById('oilTrendChart');
@@ -563,6 +627,25 @@
         const downloadGraphBtn = document.getElementById('downloadGraphBtn');
         const searchDataInput = document.getElementById('searchDataInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+        // Site & Asset Management UI Elements
+        const siteSelect = document.getElementById('siteSelect');
+        const createSiteBtn = document.getElementById('createSiteBtn');
+        const siteModal = document.getElementById('siteModal'); // Renamed from jobModal
+        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn'); // Renamed from closeJobModalBtn
+        const newSiteForm = document.getElementById('newSiteForm'); // Renamed from newJobForm
+        const newSiteNameInput = document.getElementById('newSiteName'); // Renamed from newJobName
+
+        const assetSelect = document.getElementById('assetSelect');
+        const createAssetBtn = document.getElementById('createAssetBtn');
+        const assetModal = document.getElementById('assetModal');
+        const closeAssetModalBtn = document.getElementById('closeAssetModalBtn');
+        const newAssetForm = document.getElementById('newAssetForm');
+        const newAssetNameInput = document.getElementById('newAssetName');
+        const currentSiteNameDisplay = document.getElementById('currentSiteNameDisplay');
+        const currentAssetNameDisplay = document.getElementById('currentAssetNameDisplay');
+        const assetSelectionRow = document.getElementById('assetSelectionRow');
+
 
         let allTestData = []; // To store all fetched data for graphing
 
@@ -604,10 +687,24 @@
          * rules_version = '2';
          * service cloud.firestore {
          * match /databases/{database}/documents {
-         * // Allow authenticated users (including anonymous) to read and write to their own data
-         * // stored under artifacts/{projectId}/users/{userId}/transformer_oil_tests
-         * match /artifacts/{projectId}/users/{userId}/transformer_oil_tests/{document=**} {
+         * // Rules for user-specific data and sites
+         * match /artifacts/{projectId}/users/{userId} {
          * allow read, write: if request.auth != null && request.auth.uid == userId;
+         *
+         * // Rules for the 'sites' collection under a user
+         * match /sites/{siteId} {
+         * allow read, write: if request.auth != null && request.auth.uid == userId;
+         *
+         * // Rules for the 'assets' subcollection under each site
+         * match /assets/{assetId} {
+         * allow read, write: if request.auth != null && request.auth.uid == userId;
+         *
+         * // Rules for the 'transformer_oil_tests' subcollection under each asset
+         * match /transformer_oil_tests/{document=**} {
+         * allow read, write: if request.auth != null && request.auth.uid == userId;
+         * }
+         * }
+         * }
          * }
          * }
          * }
@@ -616,8 +713,6 @@
          * f. **CRITICAL: Click the "Publish" button.** This applies the rules live. If you skip this, the changes won't take effect.
          *
          * After completing these steps, perform a hard refresh (Ctrl+F5 or Cmd+Shift+R) on your GitHub Pages site.
-         * If the "SyntaxError" persists, it indicates an issue with the HTML file itself (e.g., truncated during saving/uploading).
-         * If the "Missing or insufficient permissions" persists, it means the Firebase rules were not correctly applied or published.
          */
 
 
@@ -657,16 +752,12 @@
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
-                        userIdDisplay.textContent = `User ID: ${userId}`;
                         console.log("Auth state changed. User ID:", userId);
-                        setupFirestoreListener(); // Start listening to data once authenticated
+                        loadSites(); // Load sites once authenticated
                     } else {
-                        // This case should ideally not be hit if signInAnonymously succeeds,
-                        // but provides a fallback for userId if auth state is somehow lost.
                         userId = crypto.randomUUID(); // Fallback for unauthenticated/anonymous
-                        userIdDisplay.textContent = `User ID: ${userId} (Anonymous)`;
                         console.log("User is signed out or anonymous. Using random ID:", userId);
-                        setupFirestoreListener(); // Still try to listen, but data will be under anonymous ID
+                        loadSites(); // Still try to load sites, but data will be under anonymous ID
                     }
                 });
 
@@ -676,28 +767,254 @@
             }
         }
 
-        // --- Firestore Data Operations ---
+        // --- Site Management Operations ---
 
         /**
-         * Sets up a real-time listener for transformer oil test data.
+         * Loads all sites for the current user and populates the dropdown.
+         */
+        async function loadSites() {
+            if (!db || !userId) {
+                console.warn("Firestore or User ID not ready for site loading.");
+                return;
+            }
+            loadingIndicator.classList.remove('hidden');
+            siteSelect.innerHTML = '<option value="">Loading Sites...</option>'; // Clear and show loading
+            assetSelect.innerHTML = '<option value="">Select Site First</option>'; // Clear asset dropdown
+
+            try {
+                const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
+                console.log("Attempting to load sites from path:", sitesPath); // Log the path
+                const sitesColRef = collection(db, sitesPath);
+                const q = query(sitesColRef);
+                const querySnapshot = await getDocs(q);
+
+                const sites = [];
+                querySnapshot.forEach((doc) => {
+                    sites.push({ id: doc.id, ...doc.data() });
+                });
+
+                siteSelect.innerHTML = ''; // Clear options
+                if (sites.length > 0) {
+                    sites.sort((a, b) => a.siteName.localeCompare(b.siteName)); // Sort alphabetically
+                    sites.forEach(site => {
+                        const option = document.createElement('option');
+                        option.value = site.id;
+                        option.textContent = site.siteName;
+                        siteSelect.appendChild(option);
+                    });
+                    // Select the first site by default if no site is currently selected
+                    if (!currentSiteId || !sites.some(site => site.id === currentSiteId)) {
+                        selectSite(sites[0].id, sites[0].siteName);
+                    } else {
+                        // Re-select the previously active site if it still exists
+                        siteSelect.value = currentSiteId;
+                        currentSiteNameDisplay.textContent = currentSiteName;
+                        loadAssets(); // Load assets for the re-selected site
+                    }
+                } else {
+                    siteSelect.innerHTML = '<option value="">No Sites Available</option>';
+                    currentSiteId = null;
+                    currentSiteName = 'None Selected';
+                    currentSiteNameDisplay.textContent = currentSiteName;
+                    currentAssetId = null;
+                    currentAssetName = 'None Selected';
+                    currentAssetNameDisplay.textContent = currentAssetName;
+                    showMessageBox("No sites found. Please create your first site!", false);
+                    siteModal.style.display = 'flex'; // Automatically open site creation modal
+                }
+            } catch (e) {
+                console.error("Error loading sites:", e);
+                showMessageBox(`Error loading sites: ${e.message}`, true);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Sets the currently active site and triggers asset loading.
+         * @param {string} siteId - The ID of the site to select.
+         * @param {string} siteName - The name of the site to select.
+         */
+        function selectSite(siteId, siteName) {
+            currentSiteId = siteId;
+            currentSiteName = siteName;
+            currentSiteNameDisplay.textContent = currentSiteName;
+            siteSelect.value = siteId; // Ensure dropdown reflects selection
+            currentAssetId = null; // Reset asset selection when site changes
+            currentAssetName = 'None Selected';
+            currentAssetNameDisplay.textContent = currentAssetName;
+            loadAssets(); // Load assets for the newly selected site
+            showMessageBox(`Site "${siteName}" selected.`);
+        }
+
+        /**
+         * Creates a new site in Firestore.
+         * @param {string} siteName - The name of the new site.
+         */
+        async function createNewSite(siteName) {
+            if (!db || !userId) {
+                showMessageBox("Database not ready. Please wait for initialization.", true);
+                return;
+            }
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
+                console.log("Attempting to create site at path:", sitesPath); // Log the path
+                const docRef = await addDoc(collection(db, sitesPath), {
+                    siteName: siteName,
+                    createdAt: new Date().toISOString()
+                });
+                console.log("New site created with ID: ", docRef.id);
+                showMessageBox(`Site "${siteName}" created successfully!`);
+                siteModal.style.display = 'none'; // Hide modal
+                newSiteForm.reset(); // Clear form
+                await loadSites(); // Reload sites to update dropdown
+                selectSite(docRef.id, siteName); // Automatically select the new site (fixed jobName to siteName)
+            } catch (e) {
+                console.error("Error creating site: ", e);
+                showMessageBox(`Error creating site: ${e.message}`, true);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // --- Asset Management Operations ---
+
+        /**
+         * Loads all assets for the current site and populates the dropdown.
+         */
+        async function loadAssets() {
+            if (!db || !userId || !currentSiteId) {
+                console.warn("Firestore, User ID, or Site ID not ready for asset loading.");
+                assetSelect.innerHTML = '<option value="">Select Site First</option>';
+                allTestData = []; // Clear data if no site is selected
+                filterAndDisplayData(); // Update display to show no data
+                drawChart(allTestData, graphParamSelect.value); // Clear graph
+                return;
+            }
+            loadingIndicator.classList.remove('hidden');
+            assetSelect.innerHTML = '<option value="">Loading Assets...</option>'; // Clear and show loading
+
+            try {
+                const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
+                console.log("Attempting to load assets from path:", assetsPath); // Log the path
+                const assetsColRef = collection(db, assetsPath);
+                const q = query(assetsColRef);
+                const querySnapshot = await getDocs(q);
+
+                const assets = [];
+                querySnapshot.forEach((doc) => {
+                    assets.push({ id: doc.id, ...doc.data() });
+                });
+
+                assetSelect.innerHTML = ''; // Clear options
+                if (assets.length > 0) {
+                    assets.sort((a, b) => a.assetName.localeCompare(b.assetName)); // Sort alphabetically
+                    assets.forEach(asset => {
+                        const option = document.createElement('option');
+                        option.value = asset.id;
+                        option.textContent = asset.assetName;
+                        assetSelect.appendChild(option);
+                    });
+                    // Select the first asset by default if no asset is currently selected
+                    if (!currentAssetId || !assets.some(asset => asset.id === currentAssetId)) {
+                        selectAsset(assets[0].id, assets[0].assetName);
+                    } else {
+                        // Re-select the previously active asset if it still exists
+                        assetSelect.value = currentAssetId;
+                        currentAssetNameDisplay.textContent = currentAssetName;
+                        setupFirestoreListener(); // Re-attach listener for current asset
+                    }
+                } else {
+                    assetSelect.innerHTML = '<option value="">No Assets Available</option>';
+                    currentAssetId = null;
+                    currentAssetName = 'None Selected';
+                    currentAssetNameDisplay.textContent = currentAssetName;
+                    showMessageBox(`No assets found for site "${currentSiteName}". Please create your first asset!`, false);
+                    assetModal.style.display = 'flex'; // Automatically open asset creation modal
+                }
+            } catch (e) {
+                console.error("Error loading assets:", e);
+                showMessageBox(`Error loading assets: ${e.message}`, true);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Sets the currently active asset and triggers data loading.
+         * @param {string} assetId - The ID of the asset to select.
+         * @param {string} assetName - The name of the asset to select.
+         */
+        function selectAsset(assetId, assetName) {
+            currentAssetId = assetId;
+            currentAssetName = assetName;
+            currentAssetNameDisplay.textContent = currentAssetName;
+            assetSelect.value = assetId; // Ensure dropdown reflects selection
+            setupFirestoreListener(); // Load test data for the newly selected asset
+            showMessageBox(`Asset "${assetName}" selected.`);
+        }
+
+        /**
+         * Creates a new asset in Firestore under the current site.
+         * @param {string} assetName - The name of the new asset.
+         */
+        async function createNewAsset(assetName) {
+            if (!db || !userId || !currentSiteId) {
+                showMessageBox("Please select a site first before creating an asset.", true);
+                return;
+            }
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
+                console.log("Attempting to create asset at path:", assetsPath); // Log the path
+                const docRef = await addDoc(collection(db, assetsPath), {
+                    assetName: assetName,
+                    createdAt: new Date().toISOString()
+                });
+                console.log("New asset created with ID: ", docRef.id);
+                showMessageBox(`Asset "${assetName}" created successfully!`);
+                assetModal.style.display = 'none'; // Hide modal
+                newAssetForm.reset(); // Clear form
+                await loadAssets(); // Reload assets to update dropdown
+                selectAsset(docRef.id, assetName); // Automatically select the new asset
+            } catch (e) {
+                console.error("Error creating asset: ", e);
+                showMessageBox(`Error creating asset: ${e.message}`, true);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // --- Firestore Data Operations (now site and asset-specific) ---
+
+        /**
+         * Sets up a real-time listener for transformer oil test data for the current asset.
          */
         function setupFirestoreListener() {
-            if (!db || !userId) {
-                console.warn("Firestore or User ID not ready for listener setup.");
+            if (!db || !userId || !currentSiteId || !currentAssetId) {
+                console.warn("Firestore, User ID, Site ID, or Asset ID not ready for listener setup. Skipping data load.");
+                allTestData = []; // Clear data if no site/asset is selected
+                filterAndDisplayData(); // Update display to show no data
+                loadingIndicator.classList.add('hidden');
                 return;
             }
 
             loadingIndicator.classList.remove('hidden');
-            // Use the projectId from your firebaseConfig for the collection path
-            // This ensures data is stored under your specific project's ID in Firestore.
-            const colRef = collection(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/transformer_oil_tests`);
-            const q = query(colRef); // No orderBy to avoid index issues
+            const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+            console.log("Attempting to load tests from path:", testsPath); // Log the path
+            const colRef = collection(db, testsPath);
+            const q = query(colRef);
 
-            onSnapshot(q, (snapshot) => {
+            // Detach previous listener if it exists to avoid multiple listeners
+            if (window.currentSnapshotUnsubscribe) {
+                window.currentSnapshotUnsubscribe();
+            }
+
+            window.currentSnapshotUnsubscribe = onSnapshot(q, (snapshot) => {
                 allTestData = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
-                    // Ensure dateOfTest is a string for consistent sorting and parsing
                     if (data.dateOfTest) {
                         allTestData.push({ id: doc.id, ...data });
                     } else {
@@ -705,40 +1022,41 @@
                     }
                 });
 
-                // Sort data by dateOfTest in ascending order for graphing
                 allTestData.sort((a, b) => {
                     const dateA = new Date(a.dateOfTest);
                     const dateB = new Date(b.dateOfTest);
                     return dateA - dateB;
                 });
 
-                // Display all data initially, then apply search filter if present
                 filterAndDisplayData();
                 drawChart(allTestData, graphParamSelect.value);
                 loadingIndicator.classList.add('hidden');
             }, (error) => {
-                console.error("Error fetching data from Firestore:", error);
-                showMessageBox(`Error loading data: ${error.message}`, true);
+                console.error("Error fetching data from Firestore for current asset:", error);
+                showMessageBox(`Error loading data for asset: ${error.message}`, true);
                 loadingIndicator.classList.add('hidden');
             });
         }
 
         /**
-         * Adds a new test entry to Firestore.
+         * Adds a new test entry to Firestore for the current asset.
          * @param {Object} data - The test data to add.
          */
         async function addTestEntry(data) {
+            if (!db || !userId || !currentSiteId || !currentAssetId) {
+                showMessageBox("Please select a site and an asset first.", true);
+                return;
+            }
+            loadingIndicator.classList.remove('hidden');
             try {
-                if (!db || !userId) {
-                    showMessageBox("Database not ready. Please wait for initialization.", true);
-                    return;
-                }
-                loadingIndicator.classList.remove('hidden');
-                const docRef = await addDoc(collection(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/transformer_oil_tests`), data);
+                const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+                console.log("Attempting to add test entry at path:", testsPath); // Log the path
+                const colRef = collection(db, testsPath);
+                const docRef = await addDoc(colRef, data);
                 console.log("Document written with ID: ", docRef.id);
                 showMessageBox("Test entry saved successfully!");
-                oilTestForm.reset(); // Clear form
-                dataEntryModal.style.display = 'none'; // Hide modal
+                oilTestForm.reset();
+                dataEntryModal.style.display = 'none';
             } catch (e) {
                 console.error("Error adding document: ", e);
                 showMessageBox(`Error saving data: ${e.message}`, true);
@@ -748,17 +1066,20 @@
         }
 
         /**
-         * Deletes a test entry from Firestore.
+         * Deletes a test entry from Firestore for the current asset.
          * @param {string} docId - The ID of the document to delete.
          */
         async function deleteTestEntry(docId) {
+            if (!db || !userId || !currentSiteId || !currentAssetId) {
+                showMessageBox("No site or asset selected. Cannot delete entry.", true);
+                return;
+            }
+            loadingIndicator.classList.remove('hidden');
             try {
-                if (!db || !userId) {
-                    showMessageBox("Database not ready. Please wait for initialization.", true);
-                    return;
-                }
-                loadingIndicator.classList.remove('hidden');
-                await deleteDoc(doc(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/transformer_oil_tests`, docId));
+                const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+                console.log("Attempting to delete test entry from path:", testsPath, "Document ID:", docId); // Log the path
+                const docRef = doc(db, testsPath, docId);
+                await deleteDoc(docRef);
                 console.log("Document successfully deleted!");
                 showMessageBox("Entry deleted successfully!");
             } catch (e) {
@@ -772,22 +1093,40 @@
         // --- UI Event Handlers ---
 
         newEntryBtn.addEventListener('click', () => {
-            oilTestForm.reset(); // Clear form fields
-            dataEntryModal.style.display = 'flex'; // Show the modal
+            if (!currentSiteId || !currentAssetId) {
+                showMessageBox("Please select a site and an asset before adding a test entry.", true);
+                return;
+            }
+            oilTestForm.reset();
+            dataEntryModal.style.display = 'flex';
+        });
+
+        viewDataBtn.addEventListener('click', () => {
+            if (!currentSiteId || !currentAssetId) {
+                showMessageBox("Please select a site and an asset to view data.", true);
+                return;
+            }
+            // Data is already loaded by onSnapshot, just ensure list is visible
+            filterAndDisplayData();
         });
 
         closeButton.addEventListener('click', () => {
-            dataEntryModal.style.display = 'none'; // Hide the modal
+            dataEntryModal.style.display = 'none';
         });
 
         cancelEntryBtn.addEventListener('click', () => {
-            dataEntryModal.style.display = 'none'; // Hide the modal
+            dataEntryModal.style.display = 'none';
         });
 
-        // Close modal if user clicks outside of it
         window.addEventListener('click', (event) => {
             if (event.target == dataEntryModal) {
                 dataEntryModal.style.display = 'none';
+            }
+            if (event.target == siteModal) {
+                siteModal.style.display = 'none';
+            }
+            if (event.target == assetModal) {
+                assetModal.style.display = 'none';
             }
         });
 
@@ -796,7 +1135,6 @@
             const formData = new FormData(oilTestForm);
             const data = {};
             for (let [key, value] of formData.entries()) {
-                // Convert numbers where appropriate
                 if (!isNaN(parseFloat(value)) && isFinite(value) && key !== 'dateOfNextSample' && key !== 'colour' && key !== 'appearance' && key !== 'odour' && key !== 'fibres' && key !== 'turbidity' && key !== 'pcbsResult' && key !== 'recommendations') {
                     data[key] = parseFloat(value);
                 } else {
@@ -810,7 +1148,6 @@
             drawChart(allTestData, event.target.value);
         });
 
-        // --- Download Graph Functionality ---
         downloadGraphBtn.addEventListener('click', () => {
             const dataURL = oilTrendChartCanvas.toDataURL('image/png');
             const a = document.createElement('a');
@@ -822,7 +1159,6 @@
             showMessageBox("Graph downloaded successfully!");
         });
 
-        // --- Search/Filter Functionality ---
         searchDataInput.addEventListener('input', filterAndDisplayData);
         clearSearchBtn.addEventListener('click', () => {
             searchDataInput.value = '';
@@ -838,7 +1174,6 @@
 
             if (searchTerm) {
                 filteredData = allTestData.filter(entry => {
-                    // Search in Asset No, Date of Test, Type (case-insensitive)
                     return (entry.assetNo && String(entry.assetNo).toLowerCase().includes(searchTerm)) ||
                            (entry.dateOfTest && String(entry.dateOfTest).toLowerCase().includes(searchTerm)) ||
                            (entry.type && String(entry.type).toLowerCase().includes(searchTerm));
@@ -847,15 +1182,12 @@
             displayTestData(filteredData);
         }
 
-
-        // --- Data Display ---
-
         /**
          * Displays the fetched test data in the list.
          * @param {Array<Object>} dataArray - Array of test data objects to display (can be filtered).
          */
         function displayTestData(dataArray) {
-            dataList.innerHTML = ''; // Clear previous entries
+            dataList.innerHTML = '';
             if (dataArray.length === 0) {
                 noDataMessage.classList.remove('hidden');
             } else {
@@ -874,7 +1206,6 @@
                     dataList.appendChild(div);
                 });
 
-                // Add event listeners to delete buttons
                 dataList.querySelectorAll('.delete-btn').forEach(button => {
                     button.addEventListener('click', (event) => {
                         const docId = event.target.dataset.id;
@@ -886,7 +1217,6 @@
             }
         }
 
-        // Custom Confirmation Modal (replaces browser's confirm())
         function showConfirmationModal(message, onConfirm) {
             const modalHtml = `
                 <div id="confirmationModal" class="modal" style="display: flex;">
@@ -909,7 +1239,6 @@
             document.getElementById('confirmNo').onclick = () => {
                 confirmationModal.remove();
             };
-            // Close if clicked outside
             confirmationModal.onclick = (event) => {
                 if (event.target === confirmationModal) {
                     confirmationModal.remove();
@@ -919,13 +1248,7 @@
 
         // --- Canvas Drawing (Graphing) ---
 
-        /**
-         * Draws a line chart on the canvas.
-         * @param {Array<Object>} data - The data to plot.
-         * @param {string} parameter - The parameter to graph (e.g., 'dielectricStrength').
-         */
         function drawChart(data, parameter) {
-            // Clear canvas
             ctx.clearRect(0, 0, oilTrendChartCanvas.width, oilTrendChartCanvas.height);
 
             if (data.length === 0) {
@@ -947,36 +1270,29 @@
                 return;
             }
 
-            // Find min/max values for scaling
             const minValue = Math.min(...values);
             const maxValue = Math.max(...values);
             const valueRange = maxValue - minValue;
 
-            // Canvas dimensions
             const canvasWidth = oilTrendChartCanvas.width;
             const canvasHeight = oilTrendChartCanvas.height;
-            const padding = 50; // Padding for axes and labels
+            const padding = 50;
 
-            // Calculate scales
             const xScale = (canvasWidth - 2 * padding) / (dates.length - 1);
-            const yScale = (canvasHeight - 2 * padding) / (valueRange === 0 ? 1 : valueRange); // Avoid division by zero
+            const yScale = (canvasHeight - 2 * padding) / (valueRange === 0 ? 1 : valueRange);
 
-            // Draw axes
             ctx.beginPath();
-            ctx.strokeStyle = '#a0aec0'; // Gray for axes
+            ctx.strokeStyle = '#a0aec0';
             ctx.lineWidth = 2;
 
-            // X-axis
             ctx.moveTo(padding, canvasHeight - padding);
             ctx.lineTo(canvasWidth - padding, canvasHeight - padding);
-            // Y-axis
             ctx.moveTo(padding, canvasHeight - padding);
             ctx.lineTo(padding, padding);
             ctx.stroke();
 
-            // Draw data points and lines
             ctx.beginPath();
-            ctx.strokeStyle = '#4299e1'; // Blue for line
+            ctx.strokeStyle = '#4299e1';
             ctx.lineWidth = 3;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -985,7 +1301,7 @@
                 const date = new Date(entry.dateOfTest);
                 const value = entry[parameter];
 
-                if (value === undefined || value === null) return; // Skip if value is missing
+                if (value === undefined || value === null) return;
 
                 const x = padding + i * xScale;
                 const y = canvasHeight - padding - (value - minValue) * yScale;
@@ -996,7 +1312,6 @@
                     ctx.lineTo(x, y);
                 }
 
-                // Draw circles for data points
                 ctx.fillStyle = '#4299e1';
                 ctx.beginPath();
                 ctx.arc(x, y, 5, 0, Math.PI * 2);
@@ -1004,23 +1319,20 @@
             });
             ctx.stroke();
 
-            // Draw labels
             ctx.fillStyle = '#2d3748';
             ctx.font = '12px Inter';
             ctx.textAlign = 'center';
 
-            // X-axis labels (Dates)
-            const maxLabels = Math.floor((canvasWidth - 2 * padding) / 80); // Max labels to avoid overlap
+            const maxLabels = Math.floor((canvasWidth - 2 * padding) / 80);
             const labelInterval = Math.ceil(dates.length / maxLabels);
 
             dates.forEach((date, i) => {
-                if (i % labelInterval === 0 || i === dates.length - 1) { // Always show last label
+                if (i % labelInterval === 0 || i === dates.length - 1) {
                     const x = padding + i * xScale;
                     ctx.fillText(date.toLocaleDateString(), x, canvasHeight - padding + 20);
                 }
             });
 
-            // Y-axis labels (Values)
             ctx.textAlign = 'right';
             const numYLabels = 5;
             for (let i = 0; i <= numYLabels; i++) {
@@ -1029,7 +1341,6 @@
                 ctx.fillText(yValue.toFixed(2), padding - 10, y + 4);
             }
 
-            // Axis titles
             ctx.textAlign = 'center';
             ctx.font = '14px Inter';
             ctx.fillText('Date of Test', canvasWidth / 2, canvasHeight - 10);
@@ -1037,23 +1348,100 @@
             ctx.save();
             ctx.translate(padding / 2, canvasHeight / 2);
             ctx.rotate(-Math.PI / 2);
-            ctx.fillText(parameter.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 0, 0); // Format parameter name
+            ctx.fillText(parameter.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()), 0, 0);
             ctx.restore();
         }
 
-        // Resize canvas and redraw on window resize
         function resizeCanvas() {
             oilTrendChartCanvas.width = oilTrendChartCanvas.offsetWidth;
-            oilTrendChartCanvas.height = 400; // Keep height fixed or scale proportionally
+            oilTrendChartCanvas.height = 400;
             drawChart(allTestData, graphParamSelect.value);
         }
 
         window.addEventListener('resize', resizeCanvas);
 
+        // --- Site & Asset Management Event Listeners ---
+        createSiteBtn.addEventListener('click', () => {
+            newSiteNameInput.value = ''; // Clear input
+            siteModal.style.display = 'flex'; // Show site creation modal
+        });
+
+        closeSiteModalBtn.addEventListener('click', () => {
+            siteModal.style.display = 'none'; // Hide site creation modal
+        });
+
+        newSiteForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const siteName = newSiteNameInput.value.trim();
+            if (siteName) {
+                await createNewSite(siteName);
+            } else {
+                showMessageBox("Site name cannot be empty.", true);
+            }
+        });
+
+        siteSelect.addEventListener('change', (event) => {
+            const selectedSiteId = event.target.value;
+            const selectedSiteName = event.target.options[event.target.selectedIndex].text;
+            if (selectedSiteId) {
+                selectSite(selectedSiteId, selectedSiteName);
+            } else {
+                currentSiteId = null;
+                currentSiteName = 'None Selected';
+                currentSiteNameDisplay.textContent = currentSiteName;
+                currentAssetId = null;
+                currentAssetName = 'None Selected';
+                currentAssetNameDisplay.textContent = currentAssetName;
+                allTestData = []; // Clear displayed data
+                filterAndDisplayData(); // Update UI
+                drawChart(allTestData, graphParamSelect.value); // Clear graph
+                showMessageBox("Please select or create a site.", true);
+            }
+        });
+
+        createAssetBtn.addEventListener('click', () => {
+            if (!currentSiteId) {
+                showMessageBox("Please select a site before creating an asset.", true);
+                return;
+            }
+            newAssetNameInput.value = ''; // Clear input
+            assetModal.style.display = 'flex'; // Show asset creation modal
+        });
+
+        closeAssetModalBtn.addEventListener('click', () => {
+            assetModal.style.display = 'none'; // Hide asset creation modal
+        });
+
+        newAssetForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const assetName = newAssetNameInput.value.trim();
+            if (assetName) {
+                await createNewAsset(assetName);
+            } else {
+                showMessageBox("Asset name cannot be empty.", true);
+            }
+        });
+
+        assetSelect.addEventListener('change', (event) => {
+            const selectedAssetId = event.target.value;
+            const selectedAssetName = event.target.options[event.target.selectedIndex].text;
+            if (selectedAssetId) {
+                selectAsset(selectedAssetId, selectedAssetName);
+            } else {
+                currentAssetId = null;
+                currentAssetName = 'None Selected';
+                currentAssetNameDisplay.textContent = currentAssetName;
+                allTestData = []; // Clear displayed data
+                filterAndDisplayData(); // Update UI
+                drawChart(allTestData, graphParamSelect.value); // Clear graph
+                showMessageBox("Please select or create an asset.", true);
+            }
+        });
+
         // --- Initial Setup ---
         window.onload = function() {
             initializeFirebase();
-            resizeCanvas(); // Initial canvas resize and draw
+            resizeCanvas();
         };
     </script>
 </body>
