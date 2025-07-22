@@ -279,10 +279,10 @@
                 <option value="ethane">Ethane (ppm)</option>
                 <option value="ethylene">Ethylene (ppm)</option>
                 <option value="acetylene">Acetylene (ppm)</option>
-                <option value="carbonMonoxide">Carbon Monoxide (ppm)</option>
-                <option value="carbonDioxide">Carbon Dioxide (ppm)</option>
-                <option value="oxygen">Oxygen (ppm)</option>
-                <option value="nitrogen">Nitrogen (ppm)</option>
+                <option value="carbonMonoxide">Carbon Monoxide ($CO$)</option>
+                <option value="carbonDioxide">Carbon Dioxide ($CO_2$)</option>
+                <option value="oxygen">Oxygen ($O_2$)</option>
+                <option value="nitrogen">Nitrogen ($N_2$)</option>
                 <option value="totalDissolvedGas">Total Dissolved Gas (ppm)</option>
                 <!-- Add more parameters here if needed -->
             </select>
@@ -532,14 +532,18 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // Import the functions you need from the SDKs you need
+        // Updated Firebase SDK version to 12.0.0 as provided by the user
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Global Firebase variables
         let app;
         let db;
         let auth;
+        let analytics;
         let userId = 'anonymous'; // Default to anonymous
 
         // UI Elements
@@ -557,16 +561,53 @@
         const graphParamSelect = document.getElementById('graphParamSelect');
         const oilTrendChartCanvas = document.getElementById('oilTrendChart');
         const ctx = oilTrendChartCanvas.getContext('2d');
-        const downloadGraphBtn = document.getElementById('downloadGraphBtn'); // New button
-        const searchDataInput = document.getElementById('searchDataInput'); // New search input
-        const clearSearchBtn = document.getElementById('clearSearchBtn'); // New clear search button
+        const downloadGraphBtn = document.getElementById('downloadGraphBtn');
+        const searchDataInput = document.getElementById('searchDataInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
 
         let allTestData = []; // To store all fetched data for graphing
 
         // --- Firebase Initialization and Authentication ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Your web app's Firebase configuration - PROVIDED BY USER
+        const firebaseConfig = {
+            apiKey: "AIzaSyCM_uA1J892sYrC0vVGmSaU2gn_8VNeciI",
+            authDomain: "oil-sample-tracker.firebaseapp.com",
+            projectId: "oil-sample-tracker",
+            storageBucket: "oil-sample-tracker.firebasestorage.app",
+            messagingSenderId: "271202062311",
+            appId: "1:271202062311:web:da9e75f80892d747e5b742",
+            measurementId: "G-96X1R1G85W"
+        };
+
+        /**
+         * IMPORTANT FIREBASE SECURITY RULES FOR THIS APP:
+         *
+         * To allow authenticated users (including anonymous ones) to read and write their own data,
+         * you MUST set up the following rules in your Firebase Firestore console:
+         *
+         * 1. Go to your Firebase project console: https://console.firebase.google.com/
+         * 2. Navigate to "Firestore Database" -> "Rules" tab.
+         * 3. Replace the existing rules with the following:
+         *
+         * rules_version = '2';
+         * service cloud.firestore {
+         * match /databases/{database}/documents {
+         * // Allow authenticated users to read and write to their own data
+         * // stored under artifacts/{projectId}/users/{userId}/transformer_oil_tests
+         * match /artifacts/{projectId}/users/{userId}/transformer_oil_tests/{document=**} {
+         * allow read, write: if request.auth != null && request.auth.uid == userId;
+         * }
+         * }
+         * }
+         *
+         * This rule ensures that:
+         * - Only authenticated users can access the data.
+         * - Users can only read and write to documents within their specific `userId` path.
+         * - The `projectId` in the path dynamically matches your Firebase project ID.
+         *
+         * After updating the rules, remember to "Publish" them.
+         */
+
 
         /**
          * Displays a custom message box.
@@ -590,23 +631,15 @@
          */
         async function initializeFirebase() {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    console.error("Firebase config is missing. Cannot initialize Firebase.");
-                    showMessageBox("Firebase setup error. Please check configuration.", true);
-                    return;
-                }
+                // Initialize Firebase
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                analytics = getAnalytics(app); // Initialize analytics
 
-                // Authenticate user
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                    console.log("Signed in with custom token.");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("Signed in anonymously.");
-                }
+                // Authenticate user anonymously
+                await signInAnonymously(auth);
+                console.log("Signed in anonymously.");
 
                 // Listen for auth state changes and set userId
                 onAuthStateChanged(auth, (user) => {
@@ -616,6 +649,8 @@
                         console.log("Auth state changed. User ID:", userId);
                         setupFirestoreListener(); // Start listening to data once authenticated
                     } else {
+                        // This case should ideally not be hit if signInAnonymously succeeds,
+                        // but provides a fallback for userId if auth state is somehow lost.
                         userId = crypto.randomUUID(); // Fallback for unauthenticated/anonymous
                         userIdDisplay.textContent = `User ID: ${userId} (Anonymous)`;
                         console.log("User is signed out or anonymous. Using random ID:", userId);
@@ -641,7 +676,9 @@
             }
 
             loadingIndicator.classList.remove('hidden');
-            const colRef = collection(db, `artifacts/${appId}/users/${userId}/transformer_oil_tests`);
+            // Use the projectId from your firebaseConfig for the collection path
+            // This ensures data is stored under your specific project's ID in Firestore.
+            const colRef = collection(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/transformer_oil_tests`);
             const q = query(colRef); // No orderBy to avoid index issues
 
             onSnapshot(q, (snapshot) => {
@@ -685,7 +722,7 @@
                     return;
                 }
                 loadingIndicator.classList.remove('hidden');
-                const docRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transformer_oil_tests`), data);
+                const docRef = await addDoc(collection(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/transformer_oil_tests`), data);
                 console.log("Document written with ID: ", docRef.id);
                 showMessageBox("Test entry saved successfully!");
                 oilTestForm.reset(); // Clear form
@@ -709,7 +746,7 @@
                     return;
                 }
                 loadingIndicator.classList.remove('hidden');
-                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/transformer_oil_tests`, docId));
+                await deleteDoc(doc(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/transformer_oil_tests`, docId));
                 console.log("Document successfully deleted!");
                 showMessageBox("Entry deleted successfully!");
             } catch (e) {
