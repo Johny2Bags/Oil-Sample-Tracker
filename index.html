@@ -278,6 +278,9 @@
             </div>
             <p class="text-md font-semibold text-gray-800">Current Site: <span id="currentSiteNameDisplay" class="text-blue-600">None Selected</span></p>
             <p class="text-md font-semibold text-gray-800">Current Asset: <span id="currentAssetNameDisplay" class="text-blue-600">None Selected</span></p>
+            <div id="currentAssetDetailsDisplay" class="text-sm text-gray-700 mt-2 grid grid-cols-1 md:grid-cols-2 gap-1">
+                <!-- Asset details will be displayed here -->
+            </div>
         </div>
 
         <div class="flex flex-wrap gap-4 mb-6 justify-center">
@@ -573,17 +576,54 @@
 
         <!-- The Modal for New Asset Creation -->
         <div id="assetModal" class="modal">
-            <div class="modal-content max-w-sm text-center p-8">
+            <div class="modal-content max-w-md p-8">
                 <span class="close-button" id="closeAssetModalBtn">&times;</span>
                 <h2 class="text-2xl mb-4">Create New Asset</h2>
-                <form id="newAssetForm">
-                    <div class="form-group mb-6">
+                <form id="newAssetForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group md:col-span-2">
                         <label for="newAssetName" class="block text-gray-700 font-bold mb-2">Asset Name:</label>
                         <input type="text" id="newAssetName" name="newAssetName" placeholder="e.g., Transformer T1" required class="rounded-lg">
                     </div>
-                    <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
-                        Create Asset
-                    </button>
+                    <div class="form-group">
+                        <label for="newAssetNumber">Asset Number:</label>
+                        <input type="text" id="newAssetNumber" name="newAssetNumber" placeholder="e.g., 359897" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetSerialNumber">Serial Number:</label>
+                        <input type="text" id="newAssetSerialNumber" name="newAssetSerialNumber" placeholder="e.g., 119,707" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetMake">Make:</label>
+                        <input type="text" id="newAssetMake" name="newAssetMake" placeholder="e.g., Newton" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetType">Type:</label>
+                        <input type="text" id="newAssetType" name="newAssetType" placeholder="e.g., Transformer" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetVolume">Volume (Litres):</label>
+                        <input type="number" id="newAssetVolume" name="newAssetVolume" step="any" placeholder="e.g., 2111" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetTestID">Test ID:</label>
+                        <input type="text" id="newAssetTestID" name="newAssetTestID" placeholder="e.g., MIDEL 7131" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetSamplePoint">Sample Point:</label>
+                        <input type="text" id="newAssetSamplePoint" name="newAssetSamplePoint" placeholder="e.g., Bottom of main tank" class="rounded-lg">
+                    </div>
+                    <div class="form-group">
+                        <label for="newAssetKvaRating">KVA Rating:</label>
+                        <input type="number" id="newAssetKvaRating" name="newAssetKvaRating" placeholder="e.g., 1000" class="rounded-lg">
+                    </div>
+                    <div class="md:col-span-2 flex justify-end gap-4 mt-6">
+                        <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                            Create Asset
+                        </button>
+                        <button type="button" id="cancelNewAssetBtn" class="btn-secondary hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                            Cancel
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -611,6 +651,7 @@
         let currentSiteName = 'None Selected'; // Stores the name of the currently selected site
         let currentAssetId = null; // Stores the ID of the currently selected asset
         let currentAssetName = 'None Selected'; // Stores the name of the currently selected asset
+        let currentAssetDetails = {}; // Stores all details of the currently selected asset
 
         // UI Elements
         const newEntryBtn = document.getElementById('newEntryBtn');
@@ -641,13 +682,16 @@
 
         const assetSelect = document.getElementById('assetSelect');
         const createAssetBtn = document.getElementById('createAssetBtn');
-        const deleteAssetBtn = document.getElementById('deleteAssetBtn'); // New: Delete Asset Button
+        const deleteAssetBtn = document.getElementById('deleteAssetBtn');
         const assetModal = document.getElementById('assetModal');
         const closeAssetModalBtn = document.getElementById('closeAssetModalBtn');
         const newAssetForm = document.getElementById('newAssetForm');
         const newAssetNameInput = document.getElementById('newAssetName');
+        const cancelNewAssetBtn = document.getElementById('cancelNewAssetBtn'); // New cancel button for asset modal
+
         const currentSiteNameDisplay = document.getElementById('currentSiteNameDisplay');
         const currentAssetNameDisplay = document.getElementById('currentAssetNameDisplay');
+        const currentAssetDetailsDisplay = document.getElementById('currentAssetDetailsDisplay'); // New element for asset details
         const assetSelectionRow = document.getElementById('assetSelectionRow');
 
 
@@ -785,6 +829,7 @@
             siteSelect.innerHTML = '<option value="">Loading Sites...</option>'; // Clear and show loading
             assetSelect.innerHTML = '<option value="">Select Site First</option>'; // Clear asset dropdown
             deleteAssetBtn.disabled = true; // Disable delete asset button
+            currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
                 const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
@@ -824,6 +869,7 @@
                     currentAssetId = null;
                     currentAssetName = 'None Selected';
                     currentAssetNameDisplay.textContent = currentAssetName;
+                    currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
                     showMessageBox("No sites found. Please create your first site!", false);
                     siteModal.style.display = 'flex'; // Automatically open site creation modal
                 }
@@ -848,6 +894,8 @@
             currentAssetId = null; // Reset asset selection when site changes
             currentAssetName = 'None Selected';
             currentAssetNameDisplay.textContent = currentAssetName;
+            currentAssetDetails = {}; // Clear asset details
+            currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
             loadAssets(); // Load assets for the newly selected site
             showMessageBox(`Site "${siteName}" selected.`);
         }
@@ -896,11 +944,13 @@
                 filterAndDisplayData(); // Update display to show no data
                 drawChart(allTestData, graphParamSelect.value); // Clear graph
                 deleteAssetBtn.disabled = true; // Disable delete asset button
+                currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             assetSelect.innerHTML = '<option value="">Loading Assets...</option>'; // Clear and show loading
             deleteAssetBtn.disabled = true; // Disable delete asset button until an asset is selected
+            currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
                 const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
@@ -925,12 +975,16 @@
                     });
                     // Select the first asset by default if no asset is currently selected
                     if (!currentAssetId || !assets.some(asset => asset.id === currentAssetId)) {
-                        selectAsset(assets[0].id, assets[0].assetName);
+                        selectAsset(assets[0].id, assets[0].assetName, assets[0]); // Pass full asset object
                     } else {
                         // Re-select the previously active asset if it still exists
-                        assetSelect.value = currentAssetId;
-                        currentAssetNameDisplay.textContent = currentAssetName;
-                        setupFirestoreListener(); // Re-attach listener for current asset
+                        const reSelectedAsset = assets.find(asset => asset.id === currentAssetId);
+                        if (reSelectedAsset) {
+                            selectAsset(reSelectedAsset.id, reSelectedAsset.assetName, reSelectedAsset);
+                        } else {
+                            // If previously selected asset was deleted, select the first available
+                            selectAsset(assets[0].id, assets[0].assetName, assets[0]);
+                        }
                     }
                     deleteAssetBtn.disabled = false; // Enable delete asset button if assets are available
                 } else {
@@ -938,6 +992,8 @@
                     currentAssetId = null;
                     currentAssetName = 'None Selected';
                     currentAssetNameDisplay.textContent = currentAssetName;
+                    currentAssetDetails = {}; // Clear asset details
+                    currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
                     showMessageBox(`No assets found for site "${currentSiteName}". Please create your first asset!`, false);
                     assetModal.style.display = 'flex'; // Automatically open asset creation modal
                     deleteAssetBtn.disabled = true; // No assets, keep disabled
@@ -954,12 +1010,27 @@
          * Sets the currently active asset and triggers data loading.
          * @param {string} assetId - The ID of the asset to select.
          * @param {string} assetName - The name of the asset to select.
+         * @param {Object} assetDetails - The full asset object containing all its details.
          */
-        function selectAsset(assetId, assetName) {
+        function selectAsset(assetId, assetName, assetDetails) {
             currentAssetId = assetId;
             currentAssetName = assetName;
+            currentAssetDetails = assetDetails; // Store full details
             currentAssetNameDisplay.textContent = currentAssetName;
             assetSelect.value = assetId; // Ensure dropdown reflects selection
+
+            // Display asset details
+            currentAssetDetailsDisplay.innerHTML = `
+                <p><strong>Asset No:</strong> ${currentAssetDetails.assetNumber || 'N/A'}</p>
+                <p><strong>Serial No:</strong> ${currentAssetDetails.assetSerialNumber || 'N/A'}</p>
+                <p><strong>Make:</strong> ${currentAssetDetails.assetMake || 'N/A'}</p>
+                <p><strong>Type:</strong> ${currentAssetDetails.assetType || 'N/A'}</p>
+                <p><strong>Volume:</strong> ${currentAssetDetails.assetVolume !== undefined ? currentAssetDetails.assetVolume : 'N/A'} Litres</p>
+                <p><strong>Test ID:</strong> ${currentAssetDetails.assetTestID || 'N/A'}</p>
+                <p><strong>Sample Point:</strong> ${currentAssetDetails.assetSamplePoint || 'N/A'}</p>
+                <p><strong>KVA Rating:</strong> ${currentAssetDetails.assetKvaRating !== undefined ? currentAssetDetails.assetKvaRating : 'N/A'}</p>
+            `;
+
             setupFirestoreListener(); // Load test data for the newly selected asset
             showMessageBox(`Asset "${assetName}" selected.`);
             deleteAssetBtn.disabled = false; // Enable delete asset button when an asset is selected
@@ -978,16 +1049,27 @@
             try {
                 const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
                 console.log("Attempting to create asset at path:", assetsPath); // Log the path
-                const docRef = await addDoc(collection(db, assetsPath), {
+
+                const assetData = {
                     assetName: assetName,
-                    createdAt: new Date().toISOString()
-                });
+                    createdAt: new Date().toISOString(),
+                    assetNumber: document.getElementById('newAssetNumber').value.trim(),
+                    assetSerialNumber: document.getElementById('newAssetSerialNumber').value.trim(),
+                    assetMake: document.getElementById('newAssetMake').value.trim(),
+                    assetType: document.getElementById('newAssetType').value.trim(),
+                    assetVolume: parseFloat(document.getElementById('newAssetVolume').value) || null,
+                    assetTestID: document.getElementById('newAssetTestID').value.trim(),
+                    assetSamplePoint: document.getElementById('newAssetSamplePoint').value.trim(),
+                    assetKvaRating: parseFloat(document.getElementById('newAssetKvaRating').value) || null,
+                };
+
+                const docRef = await addDoc(collection(db, assetsPath), assetData);
                 console.log("New asset created with ID: ", docRef.id);
                 showMessageBox(`Asset "${assetName}" created successfully!`);
                 assetModal.style.display = 'none'; // Hide modal
                 newAssetForm.reset(); // Clear form
                 await loadAssets(); // Reload assets to update dropdown
-                selectAsset(docRef.id, assetName); // Automatically select the new asset
+                // selectAsset is called by loadAssets after it reloads and sorts
             } catch (e) {
                 console.error("Error creating asset: ", e);
                 showMessageBox(`Error creating asset: ${e.message}`, true);
@@ -1031,6 +1113,8 @@
                     currentAssetId = null;
                     currentAssetName = 'None Selected';
                     currentAssetNameDisplay.textContent = currentAssetName;
+                    currentAssetDetails = {}; // Clear asset details
+                    currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
                     await loadAssets(); // Reload assets for the current site
                     setupFirestoreListener(); // Clear chart and list if no asset is selected
                 } catch (e) {
@@ -1153,7 +1237,19 @@
                 showMessageBox("Please select a site and an asset before adding a test entry.", true);
                 return;
             }
-            oilTestForm.reset();
+            oilTestForm.reset(); // Clear form
+
+            // Pre-fill test entry form with current asset details
+            document.getElementById('assetNo').value = currentAssetDetails.assetNumber || '';
+            document.getElementById('serialNo').value = currentAssetDetails.assetSerialNumber || '';
+            document.getElementById('make').value = currentAssetDetails.assetMake || '';
+            document.getElementById('type').value = currentAssetDetails.assetType || '';
+            document.getElementById('volume').value = currentAssetDetails.assetVolume !== undefined ? currentAssetDetails.assetVolume : '';
+            document.getElementById('testID').value = currentAssetDetails.assetTestID || '';
+            document.getElementById('samplePoint').value = currentAssetDetails.assetSamplePoint || '';
+            document.getElementById('kVADating').value = currentAssetDetails.assetKvaRating !== undefined ? currentAssetDetails.assetKvaRating : '';
+
+
             dataEntryModal.style.display = 'flex';
         });
 
@@ -1231,8 +1327,12 @@
             if (searchTerm) {
                 filteredData = allTestData.filter(entry => {
                     return (entry.assetNo && String(entry.assetNo).toLowerCase().includes(searchTerm)) ||
-                           (entry.dateOfTest && String(entry.dateOfTest).toLowerCase().includes(searchTerm)) ||
-                           (entry.type && String(entry.type).toLowerCase().includes(searchTerm));
+                           (entry.serialNo && String(entry.serialNo).toLowerCase().includes(searchTerm)) || // Added serialNo to search
+                           (entry.make && String(entry.make).toLowerCase().includes(searchTerm)) || // Added make to search
+                           (entry.type && String(entry.type).toLowerCase().includes(searchTerm)) ||
+                           (entry.testID && String(entry.testID).toLowerCase().includes(searchTerm)) || // Added testID to search
+                           (entry.samplePoint && String(entry.samplePoint).toLowerCase().includes(searchTerm)) || // Added samplePoint to search
+                           (entry.dateOfTest && String(entry.dateOfTest).toLowerCase().includes(searchTerm));
                 });
             }
             displayTestData(filteredData);
@@ -1254,6 +1354,9 @@
                     div.innerHTML = `
                         <span class="date">Date: ${entry.dateOfTest || 'N/A'}</span>
                         <span>Asset No: ${entry.assetNo || 'N/A'}</span>
+                        <span>Serial No: ${entry.serialNo || 'N/A'}</span>
+                        <span>Make: ${entry.make || 'N/A'}</span>
+                        <span>Type: ${entry.type || 'N/A'}</span>
                         <span>Dielectric Strength: ${entry.dielectricStrength !== undefined ? entry.dielectricStrength : 'N/A'} MV/m</span>
                         <span>Water Content: ${entry.waterContent !== undefined ? entry.waterContent : 'N/A'} mg/kg</span>
                         <span>Total DGA: ${entry.totalDissolvedGas !== undefined ? entry.totalDissolvedGas : 'N/A'} ppm</span>
@@ -1449,6 +1552,8 @@
                 currentAssetId = null;
                 currentAssetName = 'None Selected';
                 currentAssetNameDisplay.textContent = currentAssetName;
+                currentAssetDetails = {}; // Clear asset details
+                currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
                 allTestData = []; // Clear displayed data
                 filterAndDisplayData(); // Update UI
                 drawChart(allTestData, graphParamSelect.value); // Clear graph
@@ -1462,12 +1567,16 @@
                 showMessageBox("Please select a site before creating an asset.", true);
                 return;
             }
-            newAssetNameInput.value = ''; // Clear input
+            newAssetForm.reset(); // Clear all new asset form fields
             assetModal.style.display = 'flex'; // Show asset creation modal
         });
 
         closeAssetModalBtn.addEventListener('click', () => {
             assetModal.style.display = 'none'; // Hide asset creation modal
+        });
+
+        cancelNewAssetBtn.addEventListener('click', () => { // New: Cancel button for asset modal
+            assetModal.style.display = 'none';
         });
 
         newAssetForm.addEventListener('submit', async (event) => {
@@ -1482,13 +1591,63 @@
 
         assetSelect.addEventListener('change', (event) => {
             const selectedAssetId = event.target.value;
-            const selectedAssetName = event.target.options[event.target.selectedIndex].text;
+            // Find the full asset object from the data loaded in loadAssets
+            const selectedAssetOption = Array.from(assetSelect.options).find(opt => opt.value === selectedAssetId);
+            const selectedAssetName = selectedAssetOption ? selectedAssetOption.textContent : 'None Selected';
+
+            // We need the full asset details, not just the name and ID.
+            // This requires re-fetching or storing the asset list globally.
+            // For simplicity, let's assume `loadAssets` makes `assets` available
+            // or we refetch the specific asset doc.
+            // For now, we'll rely on `loadAssets` to call `selectAsset` with full details.
+            // If the user manually changes the dropdown, we need to find the full details.
             if (selectedAssetId) {
-                selectAsset(selectedAssetId, selectedAssetName);
+                // Find the asset details from the list of all assets (if available)
+                // This would require `loadAssets` to store the full list of assets
+                // or fetching the doc directly.
+                // For now, let's re-trigger loadAssets and let it select the asset,
+                // or if we have `allAssets` array, use that.
+                // Let's modify loadAssets to return/store the list of assets.
+                // For now, let's just re-load assets and let it select.
+                // A more robust solution would be to store `allAssets` array globally.
+
+                // Temporarily, we can just use the name from the option,
+                // and `setupFirestoreListener` will handle data loading.
+                // The `currentAssetDetails` will be populated when `loadAssets` or `selectAsset` is called with the full object.
+                // To get full details here, we'd need to re-query or have `allAssets` list.
+                // Let's defer full details update to `loadAssets` or a dedicated `fetchAssetDetails`
+                // For a quick fix, we can just use the name and ID, and the listener will load data.
+                // The `selectAsset` function already expects `assetDetails`.
+                // We need `allAssets` to be available here. Let's make `allAssetsData` global.
+
+                // Re-fetch the asset details to ensure `currentAssetDetails` is fully populated
+                // This is a bit inefficient but ensures correctness without refactoring `loadAssets` return.
+                // A better way would be to store `allAssets` in a global variable in `loadAssets`.
+                // Let's assume `allAssetsData` exists globally from `loadAssets`.
+                const foundAsset = window.allAssetsData.find(asset => asset.id === selectedAssetId);
+                if (foundAsset) {
+                    selectAsset(foundAsset.id, foundAsset.assetName, foundAsset);
+                } else {
+                    showMessageBox("Selected asset details not found.", true);
+                    currentAssetId = null;
+                    currentAssetName = 'None Selected';
+                    currentAssetNameDisplay.textContent = currentAssetName;
+                    currentAssetDetails = {};
+                    currentAssetDetailsDisplay.innerHTML = '';
+                    allTestData = [];
+                    filterAndDisplayData();
+                    drawChart(allTestData, graphParamSelect.value);
+                }
+
             } else {
+                currentSiteId = null; // Should not happen if site is selected
+                currentSiteName = 'None Selected';
+                currentSiteNameDisplay.textContent = currentSiteName;
                 currentAssetId = null;
                 currentAssetName = 'None Selected';
                 currentAssetNameDisplay.textContent = currentAssetName;
+                currentAssetDetails = {}; // Clear asset details
+                currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
                 allTestData = []; // Clear displayed data
                 filterAndDisplayData(); // Update UI
                 drawChart(allTestData, graphParamSelect.value); // Clear graph
