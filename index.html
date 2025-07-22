@@ -616,7 +616,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // Global Firebase variables
@@ -677,14 +677,16 @@
 
         // --- Firebase Initialization and Authentication ---
         // Your web app's Firebase configuration - PROVIDED BY USER
-        const firebaseConfig = {
-            apiKey: "AIzaSyCM_uA1J892sYrC0vVGmSaU2gn_8VNeciI",
-            authDomain: "oil-sample-tracker.firebaseapp.com",
-            projectId: "oil-sample-tracker",
-            storageBucket: "oil-sample-tracker.firebasestorage.app",
-            messagingSenderId: "271202062311",
-            appId: "1:271202062311:web:da9e75f80892d747e5b742",
-            measurementId: "G-96X1R1G85W"
+        // MANDATORY: Use __firebase_config and __app_id
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "YOUR_API_KEY", // Placeholder if __firebase_config is not available
+            authDomain: `${appId}.firebaseapp.com`,
+            projectId: appId,
+            storageBucket: `${appId}.appspot.com`,
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
         };
 
         /**
@@ -770,9 +772,14 @@
                 auth = getAuth(app);
                 analytics = getAnalytics(app); // Initialize analytics
 
-                // Authenticate user anonymously
-                await signInAnonymously(auth);
-                console.log("Signed in anonymously.");
+                // Authenticate user
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                    console.log("Signed in with custom token.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                }
 
                 // Listen for auth state changes and set userId
                 onAuthStateChanged(auth, (user) => {
@@ -781,7 +788,8 @@
                         console.log("Auth state changed. User ID:", userId);
                         loadSites(); // Load sites once authenticated
                     } else {
-                        userId = crypto.randomUUID(); // Fallback for unauthenticated/anonymous
+                        // Fallback for truly unauthenticated state (e.g., if anonymous token expires or is invalid)
+                        userId = crypto.randomUUID();
                         console.log("User is signed out or anonymous. Using random ID:", userId);
                         loadSites(); // Still try to load sites, but data will be under anonymous ID
                     }
@@ -810,6 +818,7 @@
             currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
+                // Use the correct projectId from firebaseConfig, which is now derived from __app_id
                 const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
                 console.log("Attempting to load sites from path:", sitesPath); // Log the path
                 const sitesColRef = collection(db, sitesPath);
@@ -1114,7 +1123,7 @@
          */
         function setupFirestoreListener() {
             if (!db || !userId || !currentSiteId || !currentAssetId) {
-                console.warn("Firestore, User ID, or Site ID not ready for listener setup. Skipping data load.");
+                console.warn("Firestore, User ID, Site ID, or Asset ID not ready for listener setup. Skipping data load.");
                 allTestData = []; // Clear data if no site/asset is selected
                 filterAndDisplayData(); // Update display to show no data
                 loadingIndicator.classList.add('hidden');
