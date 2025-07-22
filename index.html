@@ -374,7 +374,7 @@
                         <input type="number" id="volume" name="volume" step="any" placeholder="e.g., 2111" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="testID">Test ID:</label>
+                        <label for="testID">Insulating Medium:</label>
                         <input type="text" id="testID" name="testID" placeholder="e.g., MIDEL 7131" class="rounded-lg">
                     </div>
                     <div class="form-group">
@@ -605,7 +605,7 @@
                         <input type="number" id="newAssetVolume" name="newAssetVolume" step="any" placeholder="e.g., 2111" class="rounded-lg">
                     </div>
                     <div class="form-group">
-                        <label for="newAssetTestID">Test ID:</label>
+                        <label for="newAssetTestID">Insulating Medium:</label>
                         <input type="text" id="newAssetTestID" name="newAssetTestID" placeholder="e.g., MIDEL 7131" class="rounded-lg">
                     </div>
                     <div class="form-group">
@@ -676,7 +676,7 @@
         const siteSelect = document.getElementById('siteSelect');
         const createSiteBtn = document.getElementById('createSiteBtn');
         const siteModal = document.getElementById('siteModal');
-        const closeSiteModalBtn = document.getElementById('closeSiteModalBtn');
+        const closeSiteModalBtn = document = document.getElementById('closeSiteModalBtn');
         const newSiteForm = document.getElementById('newSiteForm');
         const newSiteNameInput = document.getElementById('newSiteName');
 
@@ -964,6 +964,9 @@
                     assets.push({ id: doc.id, ...doc.data() });
                 });
 
+                // Store all loaded assets globally for easy access in selectAsset
+                window.allAssetsData = assets;
+
                 assetSelect.innerHTML = ''; // Clear options
                 if (assets.length > 0) {
                     assets.sort((a, b) => a.assetName.localeCompare(b.assetName)); // Sort alphabetically
@@ -1025,10 +1028,10 @@
                 <p><strong>Serial No:</strong> ${currentAssetDetails.assetSerialNumber || 'N/A'}</p>
                 <p><strong>Make:</strong> ${currentAssetDetails.assetMake || 'N/A'}</p>
                 <p><strong>Type:</strong> ${currentAssetDetails.assetType || 'N/A'}</p>
-                <p><strong>Volume:</strong> ${currentAssetDetails.assetVolume !== undefined ? currentAssetDetails.assetVolume : 'N/A'} Litres</p>
-                <p><strong>Test ID:</strong> ${currentAssetDetails.assetTestID || 'N/A'}</p>
+                <p><strong>Volume:</strong> ${currentAssetDetails.assetVolume !== undefined && currentAssetDetails.assetVolume !== null ? currentAssetDetails.assetVolume : 'N/A'} Litres</p>
+                <p><strong>Insulating Medium:</strong> ${currentAssetDetails.assetTestID || 'N/A'}</p>
                 <p><strong>Sample Point:</strong> ${currentAssetDetails.assetSamplePoint || 'N/A'}</p>
-                <p><strong>KVA Rating:</strong> ${currentAssetDetails.assetKvaRating !== undefined ? currentAssetDetails.assetKvaRating : 'N/A'}</p>
+                <p><strong>KVA Rating:</strong> ${currentAssetDetails.assetKvaRating !== undefined && currentAssetDetails.assetKvaRating !== null ? currentAssetDetails.assetKvaRating : 'N/A'}</p>
             `;
 
             setupFirestoreListener(); // Load test data for the newly selected asset
@@ -1041,8 +1044,8 @@
          * @param {string} assetName - The name of the new asset.
          */
         async function createNewAsset(assetName) {
-            if (!db || !userId || !currentSiteId) {
-                showMessageBox("Please select a site first before creating an asset.", true);
+            if (!db || !userId) {
+                showMessageBox("Database not ready. Please wait for initialization.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
@@ -1058,7 +1061,7 @@
                     assetMake: document.getElementById('newAssetMake').value.trim(),
                     assetType: document.getElementById('newAssetType').value.trim(),
                     assetVolume: parseFloat(document.getElementById('newAssetVolume').value) || null,
-                    assetTestID: document.getElementById('newAssetTestID').value.trim(),
+                    assetTestID: document.getElementById('newAssetTestID').value.trim(), // Now Insulating Medium
                     assetSamplePoint: document.getElementById('newAssetSamplePoint').value.trim(),
                     assetKvaRating: parseFloat(document.getElementById('newAssetKvaRating').value) || null,
                 };
@@ -1155,16 +1158,19 @@
                 allTestData = [];
                 snapshot.forEach((doc) => {
                     const data = doc.data();
-                    if (data.dateOfTest) {
+                    // We now rely on 'dateOfSample' for sorting and display, as 'dateOfTest' might be removed.
+                    // If 'dateOfSample' is also optional, we'd need a different primary sorting key or handle its absence.
+                    if (data.dateOfSample) {
                         allTestData.push({ id: doc.id, ...data });
                     } else {
-                        console.warn("Document missing dateOfTest, skipping:", doc.id);
+                        console.warn("Document missing dateOfSample, skipping:", doc.id);
                     }
                 });
 
+                // Sort by dateOfSample
                 allTestData.sort((a, b) => {
-                    const dateA = new Date(a.dateOfTest);
-                    const dateB = new Date(b.dateOfTest);
+                    const dateA = new Date(a.dateOfSample);
+                    const dateB = new Date(b.dateOfSample);
                     return dateA - dateB;
                 });
 
@@ -1244,10 +1250,10 @@
             document.getElementById('serialNo').value = currentAssetDetails.assetSerialNumber || '';
             document.getElementById('make').value = currentAssetDetails.assetMake || '';
             document.getElementById('type').value = currentAssetDetails.assetType || '';
-            document.getElementById('volume').value = currentAssetDetails.assetVolume !== undefined ? currentAssetDetails.assetVolume : '';
-            document.getElementById('testID').value = currentAssetDetails.assetTestID || '';
+            document.getElementById('volume').value = currentAssetDetails.assetVolume !== undefined && currentAssetDetails.assetVolume !== null ? currentAssetDetails.assetVolume : '';
+            document.getElementById('testID').value = currentAssetDetails.assetTestID || ''; // Now Insulating Medium
             document.getElementById('samplePoint').value = currentAssetDetails.assetSamplePoint || '';
-            document.getElementById('kVADating').value = currentAssetDetails.assetKvaRating !== undefined ? currentAssetDetails.assetKvaRating : '';
+            document.getElementById('kVADating').value = currentAssetDetails.assetKvaRating !== undefined && currentAssetDetails.assetKvaRating !== null ? currentAssetDetails.assetKvaRating : '';
 
 
             dataEntryModal.style.display = 'flex';
@@ -1327,12 +1333,12 @@
             if (searchTerm) {
                 filteredData = allTestData.filter(entry => {
                     return (entry.assetNo && String(entry.assetNo).toLowerCase().includes(searchTerm)) ||
-                           (entry.serialNo && String(entry.serialNo).toLowerCase().includes(searchTerm)) || // Added serialNo to search
-                           (entry.make && String(entry.make).toLowerCase().includes(searchTerm)) || // Added make to search
+                           (entry.serialNo && String(entry.serialNo).toLowerCase().includes(searchTerm)) ||
+                           (entry.make && String(entry.make).toLowerCase().includes(searchTerm)) ||
                            (entry.type && String(entry.type).toLowerCase().includes(searchTerm)) ||
-                           (entry.testID && String(entry.testID).toLowerCase().includes(searchTerm)) || // Added testID to search
-                           (entry.samplePoint && String(entry.samplePoint).toLowerCase().includes(searchTerm)) || // Added samplePoint to search
-                           (entry.dateOfTest && String(entry.dateOfTest).toLowerCase().includes(searchTerm));
+                           (entry.testID && String(entry.testID).toLowerCase().includes(searchTerm)) || // Now Insulating Medium
+                           (entry.samplePoint && String(entry.samplePoint).toLowerCase().includes(searchTerm)) ||
+                           (entry.dateOfSample && String(entry.dateOfSample).toLowerCase().includes(searchTerm)); // Changed to dateOfSample
                 });
             }
             displayTestData(filteredData);
@@ -1352,7 +1358,7 @@
                     const div = document.createElement('div');
                     div.className = 'data-list-item';
                     div.innerHTML = `
-                        <span class="date">Date: ${entry.dateOfTest || 'N/A'}</span>
+                        <span class="date">Date of Sample: ${entry.dateOfSample || 'N/A'}</span>
                         <span>Asset No: ${entry.assetNo || 'N/A'}</span>
                         <span>Serial No: ${entry.serialNo || 'N/A'}</span>
                         <span>Make: ${entry.make || 'N/A'}</span>
@@ -1418,7 +1424,8 @@
                 return;
             }
 
-            const dates = data.map(entry => new Date(entry.dateOfTest));
+            // Use dateOfSample for charting as well
+            const dates = data.map(entry => new Date(entry.dateOfSample));
             const values = data.map(entry => entry[parameter]).filter(val => val !== undefined && val !== null);
 
             if (values.length < 2) {
@@ -1457,7 +1464,7 @@
             ctx.lineCap = 'round';
 
             data.forEach((entry, i) => {
-                const date = new Date(entry.dateOfTest);
+                const date = new Date(entry.dateOfSample); // Changed to dateOfSample
                 const value = entry[parameter];
 
                 if (value === undefined || value === null) return;
@@ -1502,7 +1509,7 @@
 
             ctx.textAlign = 'center';
             ctx.font = '14px Inter';
-            ctx.fillText('Date of Test', canvasWidth / 2, canvasHeight - 10);
+            ctx.fillText('Date of Sample', canvasWidth / 2, canvasHeight - 10); // Changed to Date of Sample
 
             ctx.save();
             ctx.translate(padding / 2, canvasHeight / 2);
@@ -1595,35 +1602,7 @@
             const selectedAssetOption = Array.from(assetSelect.options).find(opt => opt.value === selectedAssetId);
             const selectedAssetName = selectedAssetOption ? selectedAssetOption.textContent : 'None Selected';
 
-            // We need the full asset details, not just the name and ID.
-            // This requires re-fetching or storing the asset list globally.
-            // For simplicity, let's assume `loadAssets` makes `assets` available
-            // or we refetch the specific asset doc.
-            // For now, we'll rely on `loadAssets` to call `selectAsset` with full details.
-            // If the user manually changes the dropdown, we need to find the full details.
             if (selectedAssetId) {
-                // Find the asset details from the list of all assets (if available)
-                // This would require `loadAssets` to store the full list of assets
-                // or fetching the doc directly.
-                // For now, let's re-trigger loadAssets and let it select the asset,
-                // or if we have `allAssets` array, use that.
-                // Let's modify loadAssets to return/store the list of assets.
-                // For now, let's just re-load assets and let it select.
-                // A more robust solution would be to store `allAssets` array globally.
-
-                // Temporarily, we can just use the name from the option,
-                // and `setupFirestoreListener` will handle data loading.
-                // The `currentAssetDetails` will be populated when `loadAssets` or `selectAsset` is called with the full object.
-                // To get full details here, we'd need to re-query or have `allAssets` list.
-                // Let's defer full details update to `loadAssets` or a dedicated `fetchAssetDetails`
-                // For a quick fix, we can just use the name and ID, and the listener will load data.
-                // The `selectAsset` function already expects `assetDetails`.
-                // We need `allAssets` to be available here. Let's make `allAssetsData` global.
-
-                // Re-fetch the asset details to ensure `currentAssetDetails` is fully populated
-                // This is a bit inefficient but ensures correctness without refactoring `loadAssets` return.
-                // A better way would be to store `allAssets` in a global variable in `loadAssets`.
-                // Let's assume `allAssetsData` exists globally from `loadAssets`.
                 const foundAsset = window.allAssetsData.find(asset => asset.id === selectedAssetId);
                 if (foundAsset) {
                     selectAsset(foundAsset.id, foundAsset.assetName, foundAsset);
