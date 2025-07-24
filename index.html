@@ -644,11 +644,10 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-        // Import JSZip and FileSaver.js for downloading multiple graphs
-        // JSZip is typically exposed as a global variable when loaded via CDN, not as a module export.
-        // We will rely on it being globally available after the script tag.
+        // JSZip and FileSaver.js are loaded as global scripts, not modules.
+        // Their functionality will be available globally.
         // import JSZip from "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; // Removed this line
-        import { saveAs } from "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
+        // import { saveAs } from "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"; // Removed this line
 
 
         // Global Firebase variables
@@ -1436,7 +1435,7 @@
 
             // Temporarily resize canvas for consistent image export if needed, then restore
             const originalCanvasWidth = oilTrendChartCanvas.width;
-            const originalCanvasHeight = oilTrendChartCanvas.height; // Corrected variable name here
+            const originalCanvasHeight = oilTrendChartCanvas.height;
             oilTrendChartCanvas.width = 800; // Example fixed width for export
             oilTrendChartCanvas.height = 400; // Example fixed height for export
 
@@ -1469,6 +1468,7 @@
             // Generate and save the ZIP file
             zip.generateAsync({ type: "blob" })
                 .then(function(content) {
+                    // Use the globally available saveAs function
                     saveAs(content, `${currentAssetName.replace(/[^a-zA-Z0-9]/g, '_')}_all_oil_trends.zip`);
                     showMessageBox("All graphs downloaded as ZIP!");
                 })
