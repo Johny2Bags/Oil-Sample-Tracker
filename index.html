@@ -609,6 +609,24 @@
         <!-- Custom Message Box -->
         <div id="messageBox" class="message-box"></div>
 
+        <!-- PIN Entry Modal -->
+        <div id="pinEntryModal" class="modal" style="display: flex;">
+            <div class="modal-content max-w-sm text-center p-8">
+                <h2 class="text-2xl mb-4">Enter PIN to Access</h2>
+                <p class="text-gray-700 mb-6">Please enter the 4-digit PIN to access the shared transformer oil test data.</p>
+                <form id="pinForm">
+                    <div class="form-group mb-6">
+                        <label for="pinInput" class="block text-gray-700 font-bold mb-2">PIN:</label>
+                        <input type="password" id="pinInput" name="pinInput" maxlength="4" pattern="\d{4}" placeholder="****" required class="rounded-lg text-center text-xl tracking-widest">
+                    </div>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                        Submit PIN
+                    </button>
+                    <p id="pinError" class="text-red-500 mt-3 hidden">Incorrect PIN. Please try again.</p>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <!-- Firebase SDKs -->
@@ -671,12 +689,19 @@
         const currentAssetNameDisplay = document.getElementById('currentAssetNameDisplay');
         const currentAssetDetailsDisplay = document.getElementById('currentAssetDetailsDisplay'); // New element for asset details
 
+        // PIN related UI elements
+        const pinEntryModal = document.getElementById('pinEntryModal');
+        const pinForm = document.getElementById('pinForm');
+        const pinInput = document.getElementById('pinInput');
+        const pinError = document.getElementById('pinError');
+
+        // Hardcoded PIN for demonstration (NOT SECURE FOR PRODUCTION)
+        const SECRET_PIN = "1234";
 
         let allTestData = []; // To store all fetched data for graphing
 
         // --- Firebase Initialization and Authentication ---
         // Your web app's Firebase configuration - PROVIDED BY USER
-        // Reverting to hardcoded config as provided by user in earlier turn
         const firebaseConfig = {
             apiKey: "AIzaSyCM_uA1J892sYrC0vVGmSaU2gn_8VNeciI",
             authDomain: "oil-sample-tracker.firebaseapp.com",
@@ -690,9 +715,9 @@
         /**
          * IMPORTANT FIREBASE SECURITY RULES FOR THIS APP:
          *
-         * The "Missing or insufficient permissions" error is NOT a bug in this code.
-         * It means your Firebase Firestore database rules are preventing the app from reading/writing.
-         * You MUST configure these rules in your Firebase project console.
+         * To enable shared access for anyone with the PIN, you MUST update your Firebase Firestore security rules.
+         * These rules will allow any authenticated user (including anonymous users, which this app uses)
+         * to read and write to the specific public data path.
          *
          * Please follow these steps EXACTLY:
          *
@@ -713,22 +738,16 @@
          * rules_version = '2';
          * service cloud.firestore {
          * match /databases/{database}/documents {
-         * // Rules for user-specific data and sites
-         * match /artifacts/{projectId}/users/{userId} {
-         * allow read, write: if request.auth != null && request.auth.uid == userId;
+         * // Publicly shared data accessible after client-side PIN entry
+         * // WARNING: This makes data accessible to anyone who bypasses the client-side PIN check.
+         * match /artifacts/{projectId}/public/data/shared_sites/{siteId} {
+         * allow read, write: if request.auth != null;
          *
-         * // Rules for the 'sites' collection under a user
-         * match /sites/{siteId} {
-         * allow read, write: if request.auth != null && request.auth.uid == userId;
+         * match /shared_assets/{assetId} {
+         * allow read, write: if request.auth != null;
          *
-         * // Rules for the 'assets' subcollection under each site
-         * match /assets/{assetId} {
-         * allow read, write: if request.auth != null && request.auth.uid == userId;
-         *
-         * // Rules for the 'transformer_oil_tests' subcollection under each asset
-         * match /transformer_oil_tests/{document=**} {
-         * allow read, write: if request.auth != null && request.auth.uid == userId;
-         * }
+         * match /shared_transformer_oil_tests/{document=**} {
+         * allow read, write: if request.auth != null;
          * }
          * }
          * }
@@ -803,11 +822,38 @@
         // --- Site Management Operations ---
 
         /**
+         * Gets the base path for shared sites.
+         * @returns {string} The Firestore path for shared sites.
+         */
+        function getSharedSitesPath() {
+            return `artifacts/${firebaseConfig.projectId}/public/data/shared_sites`;
+        }
+
+        /**
+         * Gets the path for assets under a specific shared site.
+         * @param {string} siteId - The ID of the site.
+         * @returns {string} The Firestore path for shared assets.
+         */
+        function getSharedAssetsPath(siteId) {
+            return `${getSharedSitesPath()}/${siteId}/shared_assets`;
+        }
+
+        /**
+         * Gets the path for transformer oil tests under a specific shared asset.
+         * @param {string} siteId - The ID of the site.
+         * @param {string} assetId - The ID of the asset.
+         * @returns {string} The Firestore path for shared transformer oil tests.
+         */
+        function getSharedTestsPath(siteId, assetId) {
+            return `${getSharedAssetsPath(siteId)}/${assetId}/shared_transformer_oil_tests`;
+        }
+
+        /**
          * Loads all sites for the current user and populates the dropdown.
          */
         async function loadSites() {
-            if (!db || !userId) {
-                console.warn("Firestore or User ID not ready for site loading.");
+            if (!db) {
+                console.warn("Firestore not ready for site loading.");
                 return;
             }
             loadingIndicator.classList.remove('hidden');
@@ -817,10 +863,7 @@
             currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
-                // Use the projectId from firebaseConfig
-                const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
-                console.log("Attempting to load sites from path:", sitesPath); // Log the path
-                const sitesColRef = collection(db, sitesPath);
+                const sitesColRef = collection(db, getSharedSitesPath());
                 const q = query(sitesColRef);
                 const querySnapshot = await getDocs(q);
 
@@ -891,13 +934,13 @@
          * @param {string} siteName - The name of the new site.
          */
         async function createNewSite(siteName) {
-            if (!db || !userId) {
+            if (!db) {
                 showMessageBox("Database not ready. Please wait for initialization.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
-                const sitesPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites`;
+                const sitesPath = getSharedSitesPath();
                 console.log("Attempting to create site at path:", sitesPath); // Log the path
                 const docRef = await addDoc(collection(db, sitesPath), {
                     siteName: siteName,
@@ -923,8 +966,8 @@
          * Loads all assets for the current site and populates the dropdown.
          */
         async function loadAssets() {
-            if (!db || !userId || !currentSiteId) {
-                console.warn("Firestore, User ID, or Site ID not ready for asset loading.");
+            if (!db || !currentSiteId) {
+                console.warn("Firestore or Site ID not ready for asset loading.");
                 assetSelect.innerHTML = '<option value="">Select Site First</option>';
                 allTestData = []; // Clear data if no site is selected
                 filterAndDisplayData(); // Update display to show no data
@@ -939,7 +982,7 @@
             currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
-                const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
+                const assetsPath = getSharedAssetsPath(currentSiteId);
                 console.log("Attempting to load assets from path:", assetsPath); // Log the path
                 const assetsColRef = collection(db, assetsPath);
                 const q = query(assetsColRef);
@@ -963,7 +1006,7 @@
                         assetSelect.appendChild(option);
                     });
                     // Select the first asset by default if no asset is currently selected
-                    if (!currentAssetId || !assets.some(asset => asset.id === currentAssetId)) { // Fixed site.id to asset.id
+                    if (!currentAssetId || !assets.some(asset => asset.id === currentAssetId)) {
                         selectAsset(assets[0].id, assets[0].assetName, assets[0]); // Pass full asset object
                     } else {
                         // Re-select the previously active asset if it still exists
@@ -1030,13 +1073,13 @@
          * @param {string} assetName - The name of the new asset.
          */
         async function createNewAsset(assetName) {
-            if (!db || !userId) {
-                showMessageBox("Database not ready. Please wait for initialization.", true);
+            if (!db || !currentSiteId) {
+                showMessageBox("Database not ready or no site selected. Please wait for initialization and select a site.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
-                const assetsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`;
+                const assetsPath = getSharedAssetsPath(currentSiteId);
                 console.log("Attempting to create asset at path:", assetsPath); // Log the path
 
                 const assetData = {
@@ -1080,7 +1123,7 @@
                 loadingIndicator.classList.remove('hidden');
                 try {
                     // 1. Delete all test entries within the asset's subcollection
-                    const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+                    const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
                     const testsColRef = collection(db, testsPath);
                     const testsSnapshot = await getDocs(testsColRef);
 
@@ -1092,7 +1135,7 @@
                     console.log(`All test entries for asset ${currentAssetName} deleted.`);
 
                     // 2. Delete the asset document itself
-                    const assetDocRef = doc(db, `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets`, currentAssetId);
+                    const assetDocRef = doc(db, getSharedAssetsPath(currentSiteId), currentAssetId);
                     await deleteDoc(assetDocRef);
                     console.log(`Asset ${currentAssetName} successfully deleted!`);
 
@@ -1121,8 +1164,8 @@
          * Sets up a real-time listener for transformer oil test data for the current asset.
          */
         function setupFirestoreListener() {
-            if (!db || !userId || !currentSiteId || !currentAssetId) {
-                console.warn("Firestore, User ID, or Site ID not ready for listener setup. Skipping data load.");
+            if (!db || !currentSiteId || !currentAssetId) {
+                console.warn("Firestore, Site ID, or Asset ID not ready for listener setup. Skipping data load.");
                 allTestData = []; // Clear data if no site/asset is selected
                 filterAndDisplayData(); // Update display to show no data
                 loadingIndicator.classList.add('hidden');
@@ -1130,7 +1173,7 @@
             }
 
             loadingIndicator.classList.remove('hidden');
-            const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+            const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
             console.log("Attempting to load tests from path:", testsPath); // Log the path
             const colRef = collection(db, testsPath);
             const q = query(colRef);
@@ -1175,13 +1218,13 @@
          * @param {Object} data - The test data to add.
          */
         async function addTestEntry(data) {
-            if (!db || !userId || !currentSiteId || !currentAssetId) {
+            if (!db || !currentSiteId || !currentAssetId) {
                 showMessageBox("Please select a site and an asset first.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
-                const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+                const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
                 console.log("Attempting to add test entry at path:", testsPath); // Log the path
                 const colRef = collection(db, testsPath);
                 const docRef = await addDoc(colRef, data);
@@ -1202,13 +1245,13 @@
          * @param {string} docId - The ID of the document to delete.
          */
         async function deleteTestEntry(docId) {
-            if (!db || !userId || !currentSiteId || !currentAssetId) {
+            if (!db || !currentSiteId || !currentAssetId) {
                 showMessageBox("No site or asset selected. Cannot delete entry.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
-                const testsPath = `artifacts/${firebaseConfig.projectId}/users/${userId}/sites/${currentSiteId}/assets/${currentAssetId}/transformer_oil_tests`;
+                const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
                 console.log("Attempting to delete test entry from path:", testsPath, "Document ID:", docId); // Log the path
                 const docRef = doc(db, testsPath, docId);
                 await deleteDoc(docRef);
@@ -1272,6 +1315,9 @@
             if (event.target == assetModal) {
                 assetModal.style.display = 'none';
             }
+            if (event.target == pinEntryModal) {
+                // Do not close PIN modal if clicked outside, force PIN entry
+            }
         });
 
         oilTestForm.addEventListener('submit', (event) => {
@@ -1284,7 +1330,7 @@
                     'acidity', 'dielectricStrength', 'waterContent', 'hydrogen', 'methane', 'ethylene', 'ethane',
                     'acetylene', 'carbonMonoxide', 'carbonDioxide', 'nitrogen', 'oxygen', 'totalCombustibleGas',
                     'totalDissolvedGas', 'rogersRatio', 'furansHydroxymethylFurfuraldehyde', 'furansFurfuraldehyde',
-                    'furansFurylMethylKetone', 'furansMethylFurfuraldehyde', // Corrected: Removed duplicate
+                    'furansFurylMethylKetone', 'furansMethylFurfuraldehyde',
                     'furansFurfurylAlcohol',
                     'estimatedDegreeOfPolymerisation'
                 ];
@@ -1650,10 +1696,28 @@
             deleteSelectedAsset();
         });
 
+        // --- PIN Entry Logic ---
+        pinForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const enteredPin = pinInput.value;
+            if (enteredPin === SECRET_PIN) {
+                pinEntryModal.style.display = 'none';
+                pinError.classList.add('hidden');
+                initializeFirebase(); // Initialize Firebase only after correct PIN
+                resizeCanvas(); // Ensure canvas is correctly sized and drawn
+            } else {
+                pinError.classList.remove('hidden');
+                pinInput.value = ''; // Clear input
+                pinInput.focus(); // Keep focus on PIN input
+            }
+        });
+
         // --- Initial Setup ---
         window.onload = function() {
-            initializeFirebase();
-            resizeCanvas();
+            // Show PIN entry modal immediately on load
+            pinEntryModal.style.display = 'flex';
+            pinInput.focus();
+            // Firebase initialization and other app setup will happen after successful PIN entry
         };
     </script>
 </body>
