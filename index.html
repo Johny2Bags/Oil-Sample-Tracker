@@ -295,6 +295,9 @@
             <button id="viewDataBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
                 View All Data
             </button>
+            <button id="downloadAllGraphsBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                Download All Graphs (ZIP)
+            </button>
         </div>
 
         <div id="loadingIndicator" class="hidden text-center text-blue-600 font-semibold">
@@ -316,10 +319,10 @@
                 <option value="ethane">Ethane (ppm)</option>
                 <option value="ethylene">Ethylene (ppm)</option>
                 <option value="acetylene">Acetylene (ppm)</option>
-                <option value="carbonMonoxide">Carbon Monoxide ($CO$)</option>
-                <option value="carbonDioxide">Carbon Dioxide ($CO_2$)</option>
-                <option value="oxygen">Oxygen ($O_2$)</option>
-                <option value="nitrogen">Nitrogen ($N_2$)</option>
+                <option value="carbonMonoxide">Carbon Monoxide (CO)</option>
+                <option value="carbonDioxide">Carbon Dioxide (CO2)</option>
+                <option value="oxygen">Oxygen (O2)</option>
+                <option value="nitrogen">Nitrogen (N2)</option>
                 <option value="totalCombustibleGas">Total Combustible Gas (ppm)</option>
                 <option value="totalDissolvedGas">Total Dissolved Gas (ppm)</option>
                 <option value="rogersRatio">Rogers Ratio</option>
@@ -641,6 +644,10 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        // Import JSZip and FileSaver.js for downloading multiple graphs
+        import JSZip from "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+        import { saveAs } from "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
+
 
         // Global Firebase variables
         let app;
@@ -670,6 +677,7 @@
         const oilTrendChartCanvas = document.getElementById('oilTrendChart');
         const ctx = oilTrendChartCanvas.getContext('2d');
         const downloadGraphBtn = document.getElementById('downloadGraphBtn');
+        const downloadAllGraphsBtn = document.getElementById('downloadAllGraphsBtn'); // New: Download All Graphs button
         const searchDataInput = document.getElementById('searchDataInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
         const dataEntryModalTitle = document.getElementById('dataEntryModalTitle'); // New: Modal title element
@@ -1321,6 +1329,7 @@
                 }
             });
             saveEntryBtn.style.display = 'inline-block'; // Show save button
+            cancelEntryBtn.textContent = 'Cancel'; // Ensure cancel button text is "Cancel"
             dataEntryModalTitle.textContent = 'New Test Entry'; // Set modal title
 
             // Pre-fill test entry form with current asset details
@@ -1400,12 +1409,75 @@
             const dataURL = oilTrendChartCanvas.toDataURL('image/png');
             const a = document.createElement('a');
             a.href = dataURL;
-            a.download = `transformer_oil_trend_${graphParamSelect.value}_${new Date().toISOString().slice(0,10)}.png`;
+            // Use currentAssetName and selected parameter for filename
+            const selectedOptionText = graphParamSelect.options[graphParamSelect.selectedIndex].textContent.replace(/[\$\(\)]/g, ''); // Clean up for filename
+            a.download = `${currentAssetName.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedOptionText.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0,10)}.png`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             showMessageBox("Graph downloaded successfully!");
         });
+
+        // New: Event listener for the "Download All Graphs (ZIP)" button
+        downloadAllGraphsBtn.addEventListener('click', async () => {
+            if (!currentSiteId || !currentAssetId || allTestData.length === 0) {
+                showMessageBox("Please select an asset with data to download graphs.", true);
+                return;
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            showMessageBox("Generating all graphs for download...", false);
+
+            const zip = new JSZip();
+            const originalGraphParam = graphParamSelect.value; // Store original selection
+
+            // Temporarily resize canvas for consistent image export if needed, then restore
+            const originalCanvasWidth = oilTrendChartCanvas.width;
+            const originalCanvasHeight = oilTrendTrendChartCanvas.height;
+            oilTrendChartCanvas.width = 800; // Example fixed width for export
+            oilTrendChartCanvas.height = 400; // Example fixed height for export
+
+
+            for (const option of graphParamSelect.options) {
+                const paramValue = option.value;
+                const paramText = option.textContent; // Use original text for title
+
+                // Temporarily set the select value to draw the correct graph
+                graphParamSelect.value = paramValue;
+                drawChart(allTestData, paramValue); // Redraw the chart for the current parameter
+
+                // Get the image data URL
+                const imageData = oilTrendChartCanvas.toDataURL('image/png');
+                const base64Data = imageData.split(',')[1]; // Get base64 part
+
+                // Clean up paramText for filename
+                const cleanParamText = paramText.replace(/[\$\(\)]/g, '').replace(/\s+/g, '_');
+                // Add to zip
+                zip.file(`${currentAssetName.replace(/[^a-zA-Z0-9]/g, '_')}_${cleanParamText}.png`, base64Data, { base64: true });
+            }
+
+            // Restore original graph parameter and redraw
+            graphParamSelect.value = originalGraphParam;
+            drawChart(allTestData, originalGraphParam);
+            oilTrendChartCanvas.width = originalCanvasWidth; // Restore original size
+            oilTrendChartCanvas.height = originalCanvasHeight; // Restore original size
+
+
+            // Generate and save the ZIP file
+            zip.generateAsync({ type: "blob" })
+                .then(function(content) {
+                    saveAs(content, `${currentAssetName.replace(/[^a-zA-Z0-9]/g, '_')}_all_oil_trends.zip`);
+                    showMessageBox("All graphs downloaded as ZIP!");
+                })
+                .catch(error => {
+                    console.error("Error generating ZIP:", error);
+                    showMessageBox(`Error downloading graphs: ${error.message}`, true);
+                })
+                .finally(() => {
+                    loadingIndicator.classList.add('hidden');
+                });
+        });
+
 
         searchDataInput.addEventListener('input', filterAndDisplayData);
         clearSearchBtn.addEventListener('click', () => {
@@ -1586,18 +1658,28 @@
             const canvasWidth = oilTrendChartCanvas.width;
             const canvasHeight = oilTrendChartCanvas.height;
             const padding = 50;
+            const titleHeight = 30; // Space for the title
 
             const xScale = (canvasWidth - 2 * padding) / (dates.length - 1);
-            const yScale = (canvasHeight - 2 * padding) / (valueRange === 0 ? 1 : valueRange);
+            const yScale = (canvasHeight - 2 * padding - titleHeight) / (valueRange === 0 ? 1 : valueRange);
+
+            // Draw title
+            ctx.fillStyle = '#2b6cb0'; // Darker blue for title
+            ctx.font = '18px Inter';
+            ctx.textAlign = 'center';
+            const selectedOptionText = graphParamSelect.options[graphParamSelect.selectedIndex].textContent;
+            const graphTitle = `${currentAssetName} - ${selectedOptionText}`;
+            ctx.fillText(graphTitle, canvasWidth / 2, padding / 2 + 10); // Position title at the top
 
             // Draw axes
             ctx.beginPath();
             ctx.strokeStyle = '#a0aec0';
             ctx.lineWidth = 2;
+            // Adjust Y-axis start point for title
             ctx.moveTo(padding, canvasHeight - padding);
             ctx.lineTo(canvasWidth - padding, canvasHeight - padding); // X-axis
             ctx.moveTo(padding, canvasHeight - padding);
-            ctx.lineTo(padding, padding); // Y-axis
+            ctx.lineTo(padding, padding + titleHeight); // Y-axis starts lower to account for title
             ctx.stroke();
 
             // Draw the line connecting data points
@@ -1610,6 +1692,7 @@
             validDataPoints.forEach((entry, i) => {
                 const value = entry[parameter];
                 const x = padding + i * xScale;
+                // Adjust Y-coordinate for title offset
                 const y = canvasHeight - padding - (value - minValue) * yScale;
 
                 console.log(`Point ${i}: x=${x}, y=${y}, value=${value}`); // DEBUG LOG
@@ -1631,6 +1714,7 @@
             validDataPoints.forEach((entry, i) => {
                 const value = entry[parameter];
                 const x = padding + i * xScale;
+                // Adjust Y-coordinate for title offset
                 const y = canvasHeight - padding - (value - minValue) * yScale;
 
                 // Draw circle
@@ -1663,6 +1747,7 @@
             const numYLabels = 5;
             for (let i = 0; i <= numYLabels; i++) {
                 const yValue = minValue + (valueRange / numYLabels) * i;
+                // Adjust Y-coordinate for title offset
                 const y = canvasHeight - padding - (yValue - minValue) * yScale;
                 ctx.fillText(yValue.toFixed(2), padding - 10, y + 4);
             }
