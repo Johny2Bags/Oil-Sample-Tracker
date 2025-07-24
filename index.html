@@ -695,8 +695,12 @@
         const pinInput = document.getElementById('pinInput');
         const pinError = document.getElementById('pinError');
 
-        // Hardcoded PIN for demonstration (NOT SECURE FOR PRODUCTION)
-        const SECRET_PIN = "1234";
+        // Define valid PINs and their corresponding data IDs
+        const VALID_PINS = {
+            "1234": "pin_1234_data",
+            "1133": "pin_1133_data"
+        };
+        let CURRENT_DATA_ID = null; // This will be set after successful PIN entry
 
         let allTestData = []; // To store all fetched data for graphing
 
@@ -740,7 +744,11 @@
          * match /databases/{database}/documents {
          * // Publicly shared data accessible after client-side PIN entry
          * // WARNING: This makes data accessible to anyone who bypasses the client-side PIN check.
-         * match /artifacts/{projectId}/public/data/shared_sites/{siteId} {
+         * // Data is now segmented by a 'dataId' derived from the PIN.
+         * match /artifacts/{projectId}/public/data/shared_data/{dataId} {
+         * allow read, write: if request.auth != null;
+         *
+         * match /sites/{siteId} {
          * allow read, write: if request.auth != null;
          *
          * match /shared_assets/{assetId} {
@@ -748,6 +756,7 @@
          *
          * match /shared_transformer_oil_tests/{document=**} {
          * allow read, write: if request.auth != null;
+         * }
          * }
          * }
          * }
@@ -822,38 +831,50 @@
         // --- Site Management Operations ---
 
         /**
-         * Gets the base path for shared sites.
+         * Gets the base path for shared sites, now including the CURRENT_DATA_ID.
          * @returns {string} The Firestore path for shared sites.
          */
         function getSharedSitesPath() {
-            return `artifacts/${firebaseConfig.projectId}/public/data/shared_sites`;
+            if (!CURRENT_DATA_ID) {
+                console.error("CURRENT_DATA_ID is not set. Cannot form Firestore path.");
+                return null;
+            }
+            return `artifacts/${firebaseConfig.projectId}/public/data/shared_data/${CURRENT_DATA_ID}/sites`;
         }
 
         /**
-         * Gets the path for assets under a specific shared site.
+         * Gets the path for assets under a specific shared site, now including the CURRENT_DATA_ID.
          * @param {string} siteId - The ID of the site.
          * @returns {string} The Firestore path for shared assets.
          */
         function getSharedAssetsPath(siteId) {
-            return `${getSharedSitesPath()}/${siteId}/shared_assets`;
+            if (!CURRENT_DATA_ID) {
+                console.error("CURRENT_DATA_ID is not set. Cannot form Firestore path.");
+                return null;
+            }
+            return `artifacts/${firebaseConfig.projectId}/public/data/shared_data/${CURRENT_DATA_ID}/sites/${siteId}/shared_assets`;
         }
 
         /**
-         * Gets the path for transformer oil tests under a specific shared asset.
+         * Gets the path for transformer oil tests under a specific shared asset, now including the CURRENT_DATA_ID.
          * @param {string} siteId - The ID of the site.
          * @param {string} assetId - The ID of the asset.
          * @returns {string} The Firestore path for shared transformer oil tests.
          */
         function getSharedTestsPath(siteId, assetId) {
-            return `${getSharedAssetsPath(siteId)}/${assetId}/shared_transformer_oil_tests`;
+            if (!CURRENT_DATA_ID) {
+                console.error("CURRENT_DATA_ID is not set. Cannot form Firestore path.");
+                return null;
+            }
+            return `artifacts/${firebaseConfig.projectId}/public/data/shared_data/${CURRENT_DATA_ID}/sites/${siteId}/shared_assets/${assetId}/shared_transformer_oil_tests`;
         }
 
         /**
          * Loads all sites for the current user and populates the dropdown.
          */
         async function loadSites() {
-            if (!db) {
-                console.warn("Firestore not ready for site loading.");
+            if (!db || !CURRENT_DATA_ID) {
+                console.warn("Firestore or CURRENT_DATA_ID not ready for site loading.");
                 return;
             }
             loadingIndicator.classList.remove('hidden');
@@ -863,7 +884,9 @@
             currentAssetDetailsDisplay.innerHTML = ''; // Clear asset details display
 
             try {
-                const sitesColRef = collection(db, getSharedSitesPath());
+                const sitesPath = getSharedSitesPath();
+                if (!sitesPath) return; // Exit if path is null
+                const sitesColRef = collection(db, sitesPath);
                 const q = query(sitesColRef);
                 const querySnapshot = await getDocs(q);
 
@@ -934,13 +957,14 @@
          * @param {string} siteName - The name of the new site.
          */
         async function createNewSite(siteName) {
-            if (!db) {
-                showMessageBox("Database not ready. Please wait for initialization.", true);
+            if (!db || !CURRENT_DATA_ID) {
+                showMessageBox("Database not ready or PIN not entered. Please wait for initialization.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
                 const sitesPath = getSharedSitesPath();
+                if (!sitesPath) return; // Exit if path is null
                 console.log("Attempting to create site at path:", sitesPath); // Log the path
                 const docRef = await addDoc(collection(db, sitesPath), {
                     siteName: siteName,
@@ -951,7 +975,7 @@
                 siteModal.style.display = 'none'; // Hide modal
                 newSiteForm.reset(); // Clear form
                 await loadSites(); // Reload sites to update dropdown
-                selectSite(docRef.id, siteName); // Automatically select the new site (fixed jobName to siteName)
+                selectSite(docRef.id, siteName); // Automatically select the new site
             } catch (e) {
                 console.error("Error creating site: ", e);
                 showMessageBox(`Error creating site: ${e.message}`, true);
@@ -966,8 +990,8 @@
          * Loads all assets for the current site and populates the dropdown.
          */
         async function loadAssets() {
-            if (!db || !currentSiteId) {
-                console.warn("Firestore or Site ID not ready for asset loading.");
+            if (!db || !currentSiteId || !CURRENT_DATA_ID) {
+                console.warn("Firestore, Site ID, or CURRENT_DATA_ID not ready for asset loading.");
                 assetSelect.innerHTML = '<option value="">Select Site First</option>';
                 allTestData = []; // Clear data if no site is selected
                 filterAndDisplayData(); // Update display to show no data
@@ -983,6 +1007,7 @@
 
             try {
                 const assetsPath = getSharedAssetsPath(currentSiteId);
+                if (!assetsPath) return; // Exit if path is null
                 console.log("Attempting to load assets from path:", assetsPath); // Log the path
                 const assetsColRef = collection(db, assetsPath);
                 const q = query(assetsColRef);
@@ -1073,13 +1098,14 @@
          * @param {string} assetName - The name of the new asset.
          */
         async function createNewAsset(assetName) {
-            if (!db || !currentSiteId) {
-                showMessageBox("Database not ready or no site selected. Please wait for initialization and select a site.", true);
+            if (!db || !currentSiteId || !CURRENT_DATA_ID) {
+                showMessageBox("Database not ready, no site selected, or PIN not entered. Please wait for initialization and select a site.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
                 const assetsPath = getSharedAssetsPath(currentSiteId);
+                if (!assetsPath) return; // Exit if path is null
                 console.log("Attempting to create asset at path:", assetsPath); // Log the path
 
                 const assetData = {
@@ -1114,8 +1140,8 @@
          * Deletes the currently selected asset and all its associated test data.
          */
         async function deleteSelectedAsset() {
-            if (!currentSiteId || !currentAssetId) {
-                showMessageBox("No asset selected to delete.", true);
+            if (!currentSiteId || !currentAssetId || !CURRENT_DATA_ID) {
+                showMessageBox("No asset selected to delete or PIN not entered.", true);
                 return;
             }
 
@@ -1124,6 +1150,7 @@
                 try {
                     // 1. Delete all test entries within the asset's subcollection
                     const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
+                    if (!testsPath) return; // Exit if path is null
                     const testsColRef = collection(db, testsPath);
                     const testsSnapshot = await getDocs(testsColRef);
 
@@ -1135,7 +1162,9 @@
                     console.log(`All test entries for asset ${currentAssetName} deleted.`);
 
                     // 2. Delete the asset document itself
-                    const assetDocRef = doc(db, getSharedAssetsPath(currentSiteId), currentAssetId);
+                    const assetPath = getSharedAssetsPath(currentSiteId);
+                    if (!assetPath) return; // Exit if path is null
+                    const assetDocRef = doc(db, assetPath, currentAssetId);
                     await deleteDoc(assetDocRef);
                     console.log(`Asset ${currentAssetName} successfully deleted!`);
 
@@ -1164,8 +1193,8 @@
          * Sets up a real-time listener for transformer oil test data for the current asset.
          */
         function setupFirestoreListener() {
-            if (!db || !currentSiteId || !currentAssetId) {
-                console.warn("Firestore, Site ID, or Asset ID not ready for listener setup. Skipping data load.");
+            if (!db || !currentSiteId || !currentAssetId || !CURRENT_DATA_ID) {
+                console.warn("Firestore, Site ID, Asset ID, or CURRENT_DATA_ID not ready for listener setup. Skipping data load.");
                 allTestData = []; // Clear data if no site/asset is selected
                 filterAndDisplayData(); // Update display to show no data
                 loadingIndicator.classList.add('hidden');
@@ -1174,6 +1203,7 @@
 
             loadingIndicator.classList.remove('hidden');
             const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
+            if (!testsPath) return; // Exit if path is null
             console.log("Attempting to load tests from path:", testsPath); // Log the path
             const colRef = collection(db, testsPath);
             const q = query(colRef);
@@ -1218,13 +1248,14 @@
          * @param {Object} data - The test data to add.
          */
         async function addTestEntry(data) {
-            if (!db || !currentSiteId || !currentAssetId) {
-                showMessageBox("Please select a site and an asset first.", true);
+            if (!db || !currentSiteId || !currentAssetId || !CURRENT_DATA_ID) {
+                showMessageBox("Please select a site and an asset first, and ensure PIN is entered.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
                 const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
+                if (!testsPath) return; // Exit if path is null
                 console.log("Attempting to add test entry at path:", testsPath); // Log the path
                 const colRef = collection(db, testsPath);
                 const docRef = await addDoc(colRef, data);
@@ -1245,13 +1276,14 @@
          * @param {string} docId - The ID of the document to delete.
          */
         async function deleteTestEntry(docId) {
-            if (!db || !currentSiteId || !currentAssetId) {
-                showMessageBox("No site or asset selected. Cannot delete entry.", true);
+            if (!db || !currentSiteId || !currentAssetId || !CURRENT_DATA_ID) {
+                showMessageBox("No site or asset selected, or PIN not entered. Cannot delete entry.", true);
                 return;
             }
             loadingIndicator.classList.remove('hidden');
             try {
                 const testsPath = getSharedTestsPath(currentSiteId, currentAssetId);
+                if (!testsPath) return; // Exit if path is null
                 console.log("Attempting to delete test entry from path:", testsPath, "Document ID:", docId); // Log the path
                 const docRef = doc(db, testsPath, docId);
                 await deleteDoc(docRef);
@@ -1315,9 +1347,7 @@
             if (event.target == assetModal) {
                 assetModal.style.display = 'none';
             }
-            if (event.target == pinEntryModal) {
-                // Do not close PIN modal if clicked outside, force PIN entry
-            }
+            // Do not close PIN modal if clicked outside, force PIN entry (already handled by initial display:flex)
         });
 
         oilTestForm.addEventListener('submit', (event) => {
@@ -1700,7 +1730,8 @@
         pinForm.addEventListener('submit', (event) => {
             event.preventDefault();
             const enteredPin = pinInput.value;
-            if (enteredPin === SECRET_PIN) {
+            if (VALID_PINS[enteredPin]) {
+                CURRENT_DATA_ID = VALID_PINS[enteredPin]; // Set the data ID based on the entered PIN
                 pinEntryModal.style.display = 'none';
                 pinError.classList.add('hidden');
                 initializeFirebase(); // Initialize Firebase only after correct PIN
