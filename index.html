@@ -815,10 +815,16 @@
                 analytics = getAnalytics(app); // Initialize analytics
 
                 // Authenticate user
-                // Use __initial_auth_token if available for persistent anonymous sessions
                 if (typeof __initial_auth_token !== 'undefined') {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                    console.log("Signed in with custom token.");
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                        console.log("Signed in with custom token.");
+                    } catch (customTokenError) {
+                        console.warn("Custom token sign-in failed:", customTokenError.message, "Attempting anonymous sign-in as fallback.");
+                        // Fallback to anonymous sign-in if custom token fails
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously after custom token fallback.");
+                    }
                 } else {
                     await signInAnonymously(auth);
                     console.log("Signed in anonymously.");
@@ -992,7 +998,7 @@
                 newSiteForm.reset(); // Clear form
                 await loadSites(); // Reload sites to update dropdown
                 selectSite(docRef.id, siteName); // Automatically select the new site
-            } catch (e) {
+            }  catch (e) {
                 console.error("Error creating site: ", e);
                 showMessageBox(`Error creating site: ${e.message}`, true);
             } finally {
@@ -1387,7 +1393,7 @@
                     'acidity', 'dielectricStrength', 'waterContent', 'hydrogen', 'methane', 'ethylene', 'ethane',
                     'acetylene', 'carbonMonoxide', 'carbonDioxide', 'nitrogen', 'oxygen', 'totalCombustibleGas',
                     'totalDissolvedGas', 'rogersRatio', 'furansHydroxymethylFurfuraldehyde', 'furansFurfuraldehyde',
-                    'furansFurylMethylKetone', 'furansMethylFurfuraldehyde',
+                    'furansFurylKetone', 'furansMethylFurfuraldehyde',
                     'furansFurfurylAlcohol',
                     'estimatedDegreeOfPolymerisation'
                 ];
@@ -1660,7 +1666,7 @@
 
             const canvasWidth = oilTrendChartCanvas.width;
             const canvasHeight = oilTrendChartCanvas.height;
-            const padding = 50;
+            const padding = 70; // Increased padding to give more space for Y-axis labels
             const titleHeight = 30; // Space for the title
 
             const xScale = (canvasWidth - 2 * padding) / (dates.length - 1);
@@ -1748,24 +1754,20 @@
 
             ctx.textAlign = 'right';
             const numYLabels = 5;
+            // Adjusted X-offset for Y-axis labels based on increased padding
+            const yLabelXOffset = 25;
             for (let i = 0; i <= numYLabels; i++) {
                 const yValue = minValue + (valueRange / numYLabels) * i;
                 // Adjust Y-coordinate for title offset
                 const y = canvasHeight - padding - (yValue - minValue) * yScale;
-                ctx.fillText(yValue.toFixed(2), padding - 10, y + 4);
+                ctx.fillText(yValue.toFixed(2), padding - yLabelXOffset, y + 4); // Apply the new offset
             }
 
             ctx.textAlign = 'center';
             ctx.font = '14px Inter';
             ctx.fillText('Date of Sample', canvasWidth / 2, canvasHeight - 10); // Changed to Date of Sample
 
-            ctx.save();
-            ctx.translate(padding / 2, canvasHeight / 2);
-            ctx.rotate(-Math.PI / 2);
-            // Dynamically get the label for the selected parameter
-            const selectedOption = graphParamSelect.options[graphParamSelect.selectedIndex];
-            ctx.fillText(selectedOption.textContent, 0, 0);
-            ctx.restore();
+            // Y-axis title drawing block is removed as requested
         }
 
         function resizeCanvas() {
