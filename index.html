@@ -2109,7 +2109,23 @@
                         body: JSON.stringify(payload)
                     });
 
+                    // --- START ADDED DEBUGGING ---
+                    console.log("Gemini API Response Status:", response.status, response.statusText);
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        console.error("Gemini API Error Response Body:", errorBody);
+                        pdfScanMessage.textContent = `Error from Gemini API: ${response.status} ${response.statusText}. Details: ${errorBody.substring(0, 100)}...`;
+                        showMessageBox(`PDF scan failed: ${response.status} ${response.statusText}`, true);
+                        return; // Exit if the HTTP response itself was not OK
+                    }
+                    // --- END ADDED DEBUGGING ---
+
                     const result = await response.json();
+
+                    // --- START ADDED DEBUGGING ---
+                    console.log("Full Gemini API Result Object:", result);
+                    // --- END ADDED DEBUGGING ---
+
                     pdfScanLoading.classList.add('hidden'); // Hide loading
 
                     if (result.candidates && result.candidates.length > 0 &&
@@ -2153,8 +2169,11 @@
                             showMessageBox(`Error processing PDF: ${parseError.message}`, true);
                         }
                     } else {
-                        pdfScanMessage.textContent = 'Could not extract data from PDF. Please ensure it contains relevant information.';
-                        showMessageBox("Failed to extract data from PDF.", true);
+                        // --- START ADDED DEBUGGING ---
+                        console.warn("Gemini API did not return expected content structure:", result);
+                        // --- END ADDED DEBUGGING ---
+                        pdfScanMessage.textContent = 'Could not extract data from PDF. Please ensure it contains relevant information or try a different PDF.';
+                        showMessageBox("Failed to extract data from PDF: Unexpected Gemini response.", true);
                     }
                 };
                 reader.onerror = (error) => {
