@@ -1973,7 +1973,21 @@
                 reader.readAsArrayBuffer(file);
                 reader.onload = async (e) => {
                     const arrayBuffer = e.target.result;
-                    const base64Pdf = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+                    // --- START MODIFIED CODE ---
+                    // Convert ArrayBuffer to Base64 string more efficiently
+                    // Using TextDecoder and btoa with chunking or directly from Uint8Array if possible
+                    // For direct inlineData, a simple loop or a more modern API (if available in Canvas) is needed.
+                    // Given the constraint of not adding external libraries for this specific conversion,
+                    // we'll use a loop-based approach which is safer than String.fromCharCode.apply for large files.
+                    let binary = '';
+                    const bytes = new Uint8Array(arrayBuffer);
+                    const len = bytes.byteLength;
+                    for (let i = 0; i < len; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    const base64Pdf = btoa(binary);
+                    // --- END MODIFIED CODE ---
 
                     const prompt = `Extract the following transformer oil test parameters from this PDF document. Provide the output as a JSON object. If a field is not found, use null or "N/A" as appropriate.
 
